@@ -1,11 +1,11 @@
 import express from "express";
-import everntRouter from "./routes/event.routes";
+import router from "./routes/index"
 
 const app = express();
 
 app.use(express.json());
 
-app.use("/events", everntRouter);
+app.use("/", router);
 
 app.listen(3000, () => {
   console.log("server is listening...")
