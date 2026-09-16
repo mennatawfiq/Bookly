@@ -1,18 +1,13 @@
 import Router from "express";
+import { register } from "../controllers/auth.controllers";
+import { validate } from "../middlewares/validate";
+import { registerSchema } from "../validators/auth.validator";
 
 const router = Router();
 
-router.get("/", (req, res) => {
-  res.json({ message: "get alll users" });
-});
+router.post("/register", validate(registerSchema), register);
 
-router.get("/:userId", (req, res) => {
-  res.json({ userId: req.params.userId });
-});
-
-router.post("/", (req, res) => {
-  res.json({ message: "one user created" });
-});
+// router.post("/login");
 
 export default router;
 
