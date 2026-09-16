@@ -5,3 +5,9 @@ build/
 out/
 
 .env
+/src/generated/prisma
+
+.claude
+.agents
+.windsurf
+skills-lock.json
