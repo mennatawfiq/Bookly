@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const registerSchema = z.object({
+  name: z.string().min(2).max(100),
   email: z.email(),
   password: z
     .string()
@@ -11,4 +12,7 @@ export const registerSchema = z.object({
     .regex(/[0-9]/, { message: "Password must contain at least one number" })
     .regex(/[^A-Za-z0-9]/, { message: "Password must contain at least one special character" }),
   confirmPassword: z.string(),
-}); // TODO: add superRefine to check password == confirmPassword
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords does not match.",
+  path: ["confirmPassword"]
+});

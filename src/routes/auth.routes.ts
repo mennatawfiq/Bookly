@@ -2,15 +2,11 @@ import Router from "express";
 
 const router = Router();
 
-router.get("/", (req, res) => {
-  res.json({ message: "get alll users" });
+router.post("/register", (req, res) => {
+  res.json({ message: "one user created" });
 });
 
-router.get("/:userId", (req, res) => {
-  res.json({ userId: req.params.userId });
-});
-
-router.post("/", (req, res) => {
+router.post("/login", (req, res) => {
   res.json({ message: "one user created" });
 });
 
