@@ -1,5 +1,4 @@
 import Router from "express";
-import { errorHandler } from "../middlewares/errorHandler";
 
 import authRouter from "./auth.routes";
 import eventRouter from "./event.routes";
@@ -15,6 +14,5 @@ router.use("/users", userRouter);
 router.use("/tickets", ticketRouter);
 router.use("/bookings", bookingRouter);
 
-router.use(errorHandler);
 
 export default router;

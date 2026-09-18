@@ -1,19 +1,8 @@
 import { Request, Response, NextFunction } from "express";
+import { errorHandlerRegistery } from "../errorhandling/errorHandler.registery";
 
-export class AppError extends Error {
+export const errorHandler = (err: unknown, req: Request, res: Response, next: NextFunction) => {
 
-  statusCode: number;
-
-  constructor(statusCode: number, message: string) {
-    super(message);
-    this.statusCode = statusCode;
-  }
-};
-
-export const errorHandler = (err: AppError, req: Request, res: Response, next: NextFunction) => {
-
-  res.status(err.statusCode || 500).json({
-    message: err.message || "Internal server error"
-  });
+  errorHandlerRegistery.handle(err, res);
 
 };
