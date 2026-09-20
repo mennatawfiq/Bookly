@@ -8,8 +8,6 @@ export class UnknownErrorHandler implements IErrorHandler {
   }
 
   handle(error: unknown, res: Response): void {
-    res.status(500).json({
-      message: "Internal server error."
-    });
+    res.jsend.error("Internal server error.", 500);
   }
 };

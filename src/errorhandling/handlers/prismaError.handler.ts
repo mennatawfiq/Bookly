@@ -13,27 +13,19 @@ export class PrismaErrorHandler implements IErrorHandler {
 
     switch (prismaError.code) {
       case "P2002":
-        res.status(409).json({
-          message: "A record with this value already exists."
-        });
+        res.jsend.fail({ message: "A record with this value already exists." }, 409);
         return;
 
       case "P2025":
-        res.status(404).json({
-          message: "The requested record was not found."
-        });
+        res.jsend.fail({ message: "The requested record was not found." }, 404);
         return;
 
       case "P2003":
-        res.status(400).json({
-          message: "The operation violates a related record constraint."
-        });
+        res.jsend.fail({ message: "The operation violates a related record constraint." }, 400);
         return;
 
       default:
-        res.status(500).json({
-          message: "Database error."
-        });
+        res.jsend.error("Database error.", 500);
         return;
     }
   }
