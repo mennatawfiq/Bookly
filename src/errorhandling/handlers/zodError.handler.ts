@@ -12,13 +12,16 @@ export class ZodErrorHandler implements IErrorHandler {
   handle(error: unknown, res: Response): void {
     const zodError = error as ZodError;
 
-    res.status(400).json({
-      message: "Validation failed.",
-      errors: zodError.issues.map((issue) => ({
-        field: issue.path.join('.'),
-        message: issue.message
-      }))
-    });
+    res.jsend.fail(
+      {
+        message: "Validation failed.",
+        errors: zodError.issues.map((issue) => ({
+          field: issue.path.join("."),
+          message: issue.message
+        }))
+      },
+      400
+    );
   }
 
 };

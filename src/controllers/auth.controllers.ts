@@ -9,6 +9,6 @@ export const register = async (req: Request<{}, {}, RegisterInput>, res: Respons
 
   const user = await registerUser(name, email, password);
 
-  res.status(201).json({ user });
+  res.jsend.success({ user }, 201);
 
 };

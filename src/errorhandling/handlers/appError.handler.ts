@@ -11,9 +11,11 @@ export class AppErrorHandler implements IErrorHandler {
   handle(error: unknown, res: Response): void {
     const appError = error as AppError;
 
-    res.status(appError.statusCode).json({
-      message: appError.message
-    });
+    if (appError.status === "fail") {
+      res.jsend.fail({ message: appError.message }, appError.statusCode);
+      return;
+    }
 
+    res.jsend.error(appError.message, appError.statusCode);
   }
 };
