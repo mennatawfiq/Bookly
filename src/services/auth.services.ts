@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 import prisma from "../lib/prisma";
-import { AppError } from "../errorhandling/appError";
+import { AppError, UnauthorizedError } from "../errorhandling/appError";
 
 export async function registerUser(name: string, email: string, password: string) {
 
@@ -24,4 +24,23 @@ export async function registerUser(name: string, email: string, password: string
   });
   return user;
 
+};
+
+export async function loginUser(email: string, password: string) {
+
+  const user = await prisma.user.findUnique({
+    where: { email }
+  });
+
+  if (!user) {
+    throw new UnauthorizedError("Invalid email or password");
+  }
+
+  const passwordMatches = await bcrypt.compare(password, user?.passwordHash);
+
+  if (!passwordMatches) {
+    throw new UnauthorizedError("Invalid email or password");
+  }
+
+  return { id: user.id, name: user.name, email, role: user.role };
 };
