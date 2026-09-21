@@ -42,5 +42,5 @@ export async function loginUser(email: string, password: string) {
     throw new UnauthorizedError("Invalid email or password");
   }
 
-  return { user: { id: user.id, name: user.name, email, role: user.role } };
+  return { id: user.id, name: user.name, email, role: user.role };
 };
