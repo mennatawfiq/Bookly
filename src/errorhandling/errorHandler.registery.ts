@@ -8,7 +8,7 @@ import { UnauthorizedErrorHandler } from "./handlers/unauthorizedError.handler";
 export const errorHandlerRegistery = new ErrorHandlerRegistry([
   new ZodErrorHandler(),
   new PrismaErrorHandler(),
-  new UnauthorizedErrorHandler(),
+  // new UnauthorizedErrorHandler(),
   new AppErrorHandler(),
   new UnknownErrorHandler(),
 ]);

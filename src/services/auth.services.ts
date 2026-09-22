@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 import prisma from "../lib/prisma";
-import { AppError, UnauthorizedError } from "../errorhandling/appError";
+import { AppError } from "../errorhandling/appError";
 
 export async function registerUser(name: string, email: string, password: string) {
 
@@ -33,13 +33,13 @@ export async function loginUser(email: string, password: string) {
   });
 
   if (!user) {
-    throw new UnauthorizedError("Invalid email or password");
+    throw new AppError(401, "Invalid email or password");
   }
 
   const passwordMatches = await bcrypt.compare(password, user?.passwordHash);
 
   if (!passwordMatches) {
-    throw new UnauthorizedError("Invalid email or password");
+    throw new AppError(401, "Invalid email or password");
   }
 
   return { id: user.id, name: user.name, email, role: user.role };
