@@ -1,11 +1,11 @@
 import jwt from "jsonwebtoken";
 import { env } from "../config/env";
 
-export const generateAccessToken = (id: string, role: string) => {
+export const generateAccessToken = (id: string) => {
 
   return jwt.sign(
     {
-      sub: id, role
+      sub: id
     },
     env.JWT_SECRET,
     {

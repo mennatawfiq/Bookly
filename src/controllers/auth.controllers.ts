@@ -20,7 +20,7 @@ export const login = async (req: Request, res: Response) => {
 
   const user = await loginUser(email, password);
 
-  const token = generateAccessToken(user.id, user.role);
+  const token = generateAccessToken(user.id);
 
   res.jsend.success({ user, token }, 200);
 
