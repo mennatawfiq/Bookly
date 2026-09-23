@@ -3,8 +3,9 @@ import jwt from "jsonwebtoken";
 import { env } from "../config/env";
 import { AppError } from "../errorhandling/appError";
 import prisma from "../lib/prisma";
+import { asyncHandler } from "./asyncHandler";
 
-export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
+export const authenticate = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
 
   const authorization = req.headers.authorization;
 
@@ -51,4 +52,18 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
   req.user = { id: userId, role: user.role };
 
   next();
+});
+
+export const authorize = (...roles: string[]) => {
+
+  return (req: Request, res: Response, next: NextFunction) => {
+    const userRole = req.user?.role;
+
+    if (!userRole || !roles.includes(userRole)) {
+      return next(new AppError(403, "You do not have permission to perform this action"));
+    }
+
+    next();
+  }
+
 }

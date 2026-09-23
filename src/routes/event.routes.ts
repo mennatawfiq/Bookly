@@ -1,5 +1,6 @@
 import Router from "express";
 import { asyncHandler } from "../middlewares/asyncHandler";
+import { authenticate, authorize } from "../middlewares/auth";
 
 const router = Router();
 
@@ -11,7 +12,7 @@ router.get("/:eventId", (req, res) => {
   res.json({ eventId: req.params.eventId });
 });
 
-router.post("/", (req, res) => {
+router.post("/", authenticate, authorize('ADMIN', 'ORGANIZER'), (req, res) => {
   res.json({ message: "one event created" });
 });
 
