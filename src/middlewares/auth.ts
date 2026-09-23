@@ -4,6 +4,7 @@ import { env } from "../config/env";
 import { AppError } from "../errorhandling/appError";
 import prisma from "../lib/prisma";
 import { asyncHandler } from "./asyncHandler";
+import { OwnableDelegate, RequireOwnershipConfig } from "../types/auth";
 
 export const authenticate = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
 
@@ -65,5 +66,35 @@ export const authorize = (...roles: string[]) => {
 
     next();
   }
+
+}
+
+export const requireOwnership = <T extends Record<string, unknown>>(config: RequireOwnershipConfig<T>) => {
+
+  return asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+    if (req.user?.role === 'ADMIN') {
+      return next();
+    }
+
+    const resourceId = req.params[config.paramName];
+
+    if (typeof resourceId !== "string") {
+      throw new AppError(400, `Invalid ${config.resourceName} id`);
+    }
+
+    const resource = await config.model.findUnique({
+      where: { id: resourceId! }
+    });
+
+    if (!resource) {
+      throw new AppError(404, `${config.resourceName} not found`);
+    }
+
+    if (resource[config.ownerField] !== req.user?.id) {
+      throw new AppError(404, `${config.resourceName} not found`);
+    }
+
+    next();
+  });
 
 }
