@@ -1,5 +1,9 @@
 # Bookly: Business Requirements (v1)
 
+Status: draft 4. Last updated 2026-09-28.
+
+---
+
 ## 1. Overview and scope
 
 **Bookly** is a backend API for publishing events and reserving spots in them. Organizers create events and define ticket types with limited capacity. Users browse published events and book tickets. Every booked spot becomes its own ticket with a unique QR code, which the organizer scans at the door.
@@ -67,9 +71,12 @@
 | `email` | Unique. Used to log in. |
 | `passwordHash` | The hashed password. The plain password is never stored, and this field is never returned by the API. |
 | `role` | `ADMIN` \| `USER` \| `ORGANIZER`. Defaults to `USER`. |
+| `deletedAt` | Set when the account is deleted (anonymized). `NULL` otherwise. |
 | `createdAt`, `updatedAt` | Bookkeeping |
 
 Registration always creates a `USER`. The role changes only when an admin approves an organizer application (BR-A4), and the first admin is created by a seed script.
+
+Accounts are never hard-deleted. "Deleting" an account anonymizes it (BR-U1–U6) and every relation pointing at `User` uses `onDelete: Restrict`, so the database refuses to remove a user row that anything still references — see section 4.7.
 
 ### 4.2 OrganizerApplication
 
@@ -167,6 +174,22 @@ VALID ──► USED
 
 ---
 
+### 4.7 Referential actions (deletes)
+
+Bookly never hard-deletes business records: users are anonymized (not removed), events and bookings are cancelled (not removed), and tickets are cancelled (not removed). So every foreign key uses `onDelete: Restrict` — the database refuses the delete rather than silently cascading through history or leaving `remaining` out of sync. A cascade would skip the transactional logic (cancelling tickets, restoring `remaining`) that these rules depend on.
+
+| Relation | `onDelete` |
+|---|---|
+| `Event.organizerId` → `User` | `Restrict` |
+| `Booking.userId` → `User` | `Restrict` |
+| `OrganizerApplication.userId`, `.reviewedById` → `User` | `Restrict` |
+| `Ticket.checkedInById` → `User` | `Restrict` |
+| `TicketType.eventId` → `Event` | `Restrict` |
+| `Booking.eventId` → `Event` | `Restrict` |
+| `Ticket.bookingId` → `Booking` | `Restrict` |
+| `Ticket.ticketTypeId` → `TicketType` | `Restrict` |
+
+
 ## 5. Business rules
 
 ### 5.1 Organizer applications
@@ -190,7 +213,7 @@ VALID ──► USED
 - **BR-E5:** Only the owning organizer or an admin can edit an event. Past events cannot be edited.
 - **BR-E6:** `CANCELLED` is final. A cancelled event cannot be published again.
 - **BR-E7:** Booking closes when the event starts, not when it ends.
-- **BR-E8 (proposal):** An event can be cancelled only before it starts. This keeps cancellation from ever colliding with tickets that were already scanned.
+- **BR-E8:** An event can be cancelled only before it starts. This keeps cancellation from ever colliding with tickets that were already scanned.
 - **BR-E9:** Cancelling an event, in **one transaction**: marks the event `CANCELLED`, marks all its confirmed bookings `CANCELLED`, marks all their tickets `CANCELLED`, and restores every ticket type's `remaining` to its `capacity`. Bookings and tickets are kept for history, not deleted.
 
 ### 5.3 Ticket types
@@ -222,7 +245,16 @@ VALID ──► USED
 - **BR-C4:** Check-in records `usedAt` and `checkedInById`. `USED` is final, and a used ticket cannot be cancelled or reverted.
 - **BR-C5:** A scan of a `CANCELLED` or already `USED` ticket, or of a code that doesn't exist, is rejected with a clear message.
 
-### 5.6 QR codes
+### 5.6 Account deletion
+
+- **BR-U1:** A user can delete their own account.
+- **BR-U2:** An organizer with upcoming events (published and not yet ended) cannot delete their account until those events are cancelled or have ended. Cancelling an event affects other people, so it must be a deliberate, separate act.
+- **BR-U3:** Deleting cancels the user's upcoming confirmed bookings through the normal cancellation logic (BR-B7): tickets cancelled, each ticket type's `remaining` restored. No refunds are involved, since v1 has no payments.
+- **BR-U4:** The account is anonymized: name, email, and password become non-identifying placeholders, in the same transaction as BR-U3.
+- **BR-U5:** `deletedAt` is set. `authenticate` already reads the user from the database on every request, so it only needs to also reject users with `deletedAt` set, and this takes effect immediately, including for tokens already issued.
+- **BR-U6:** Past bookings, tickets, events, and applications are kept unchanged and display the user as "Deleted user".
+
+### 5.7 QR codes
 
 - **BR-Q1:** A ticket's `code` is a cryptographically secure random token of at least 128 bits, unique across all tickets. It is never sequential and never derived from an id.
 - **BR-Q2:** The QR image simply encodes the `code`. Whether a ticket is valid is always decided by the server looking up its status, so a cancelled ticket fails even if its QR image still exists on someone's phone.
