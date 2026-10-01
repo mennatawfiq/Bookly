@@ -9,6 +9,49 @@
 * 🟢 You can import this file directly.
 */
 
+export const BookingStatus = {
+  CONFIRMED: 'CONFIRMED',
+  CANCELLED: 'CANCELLED'
+} as const
+
+export type BookingStatus = (typeof BookingStatus)[keyof typeof BookingStatus]
+
+
+export const EventStatus = {
+  DRAFT: 'DRAFT',
+  PUBLISHED: 'PUBLISHED',
+  CANCELLED: 'CANCELLED'
+} as const
+
+export type EventStatus = (typeof EventStatus)[keyof typeof EventStatus]
+
+
+export const ApplicationStatus = {
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED'
+} as const
+
+export type ApplicationStatus = (typeof ApplicationStatus)[keyof typeof ApplicationStatus]
+
+
+export const TicketStatus = {
+  VALID: 'VALID',
+  USED: 'USED',
+  CANCELLED: 'CANCELLED'
+} as const
+
+export type TicketStatus = (typeof TicketStatus)[keyof typeof TicketStatus]
+
+
+export const TicketTypeKind = {
+  GENERAL: 'GENERAL',
+  VIP: 'VIP'
+} as const
+
+export type TicketTypeKind = (typeof TicketTypeKind)[keyof typeof TicketTypeKind]
+
+
 export const UserRole = {
   ADMIN: 'ADMIN',
   USER: 'USER',
