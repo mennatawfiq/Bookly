@@ -1,0 +1,25 @@
+model Ticket {
+  id            String       @id @default(uuid())
+  bookingId     String
+  booking       Booking      @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  ticketTypeId  String
+  ticketType    TicketType   @relation(fields: [ticketTypeId], references: [id], onDelete: Restrict)
+
+  code          String       @unique
+  status        TicketStatus @default(VALID)
+
+  createdAt     DateTime     @default(now())
+  cancelledAt   DateTime?
+  usedAt        DateTime?
+  checkedInById String?
+  checkedInBy   User?        @relation(fields: [checkedInById], references: [id], onDelete: Restrict)
+
+  @@index([bookingId])
+  @@index([ticketTypeId])
+}
+
+enum TicketStatus{
+  VALID
+  USED
+  CANCELLED
+}
