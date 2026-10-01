@@ -6,6 +6,13 @@ model User {
   role         UserRole @default(USER)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+
+  organizedEvents      Event[]
+  bookings             Booking[]
+  organizerApplications        OrganizerApplication[] @relation("Applicant")
+  reviewedApplications         OrganizerApplication[] @relation("Reviewer")
+  checkedInTickets              Ticket[]
 }
 
 enum UserRole {

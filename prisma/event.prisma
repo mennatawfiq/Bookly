@@ -1,0 +1,29 @@
+model Event {
+  id          String      @id @default(uuid())
+  organizerId String
+  organizer   User        @relation(fields: [organizerId], references: [id], onDelete: Restrict)
+
+  title       String
+  description String
+  location    String
+
+  startsAt    DateTime
+  endsAt      DateTime
+
+  status      EventStatus @default(DRAFT)
+
+  ticketTypes TicketType[]
+  bookings    Booking[]
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([organizerId])
+  @@index([status, startsAt])
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+}

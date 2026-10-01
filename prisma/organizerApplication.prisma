@@ -1,0 +1,26 @@
+model OrganizerApplication {
+  id           String            @id @default(uuid())
+  userId       String
+  user         User              @relation("Applicant", fields: [userId], references: [id], onDelete: Restrict)
+
+  reviewedById String?
+  reviewedBy   User?             @relation("Reviewer", fields: [reviewedById], references: [id], onDelete: Restrict)
+
+  organizationName String
+  description      String
+  status           ApplicationStatus @default(PENDING)
+  reviewNote       String?
+  reviewedAt       DateTime?
+
+  createdAt    DateTime          @default(now())
+
+  @@unique([userId], where: raw( "status = 'PENDING'" ))
+  @@index([userId])
+  @@index([status])
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
