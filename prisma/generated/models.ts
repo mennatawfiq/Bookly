@@ -8,5 +8,10 @@
  *
  * 🟢 You can import this file directly.
  */
+export type * from './models/Booking.js'
+export type * from './models/Event.js'
+export type * from './models/OrganizerApplication.js'
+export type * from './models/Ticket.js'
+export type * from './models/TicketType.js'
 export type * from './models/User.js'
 export type * from './commonInputTypes.js'
