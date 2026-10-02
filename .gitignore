@@ -5,7 +5,7 @@ build/
 out/
 
 .env
-/src/generated/prisma
+/prisma/generated
 
 .claude
 .agents

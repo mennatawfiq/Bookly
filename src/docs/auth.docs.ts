@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { registry } from "./registry";
-import { registerSchema, loginSchema } from "../validators/auth.validator";
+import { registerSchema, loginSchema } from "../schemas/auth.schema";
 import { UserSchema } from "../schemas/user.schema";
-import { jsonResponse } from "./helpers.docs";
+import { jsonResponse } from "./helpers";
 import { jsendSuccess } from "../schemas/jsend.schema";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
 
