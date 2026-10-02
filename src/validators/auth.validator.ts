@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 export const registerSchema = z.object({
-  name: z.string().min(2).max(100),
-  email: z.email(),
+  name: z.string().min(2).max(100).meta({ example: "Jane Doe" }),
+  email: z.email().meta({ example: "jane@example.com" }),
   password: z
     .string()
     .min(8, { message: "Password must be at least 8 characters long" })
@@ -10,8 +10,9 @@ export const registerSchema = z.object({
     .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter" })
     .regex(/[a-z]/, { message: "Password must contain at least one lowercase letter" })
     .regex(/[0-9]/, { message: "Password must contain at least one number" })
-    .regex(/[^A-Za-z0-9]/, { message: "Password must contain at least one special character" }),
-  confirmPassword: z.string(),
+    .regex(/[^A-Za-z0-9]/, { message: "Password must contain at least one special character" })
+    .meta({ example: "Str0ng!Password" }),
+  confirmPassword: z.string().meta({ example: "Str0ng!Password" }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords does not match.",
   path: ["confirmPassword"]
@@ -20,6 +21,6 @@ export const registerSchema = z.object({
 export type RegisterInput = z.infer<typeof registerSchema>;
 
 export const loginSchema = z.object({
-  email: z.email(),
-  password: z.string().min(1)
+  email: z.email().meta({ example: "jane@example.com" }),
+  password: z.string().min(1).meta({ example: "Str0ng!Password" })
 });
