@@ -1,4 +1,6 @@
 import "./docs/zod-extend"
+import "./docs/auth.docs"
+import "./docs/jsend.docs"
 import express from "express";
 import router from "./routes/index";
 import { errorHandler } from "./middlewares/errorHandler";
