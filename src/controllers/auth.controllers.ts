@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { registerUser, loginUser } from "../services/auth.services";
-import { RegisterInput } from "../validators/auth.validator";
+import { RegisterInput } from "../schemas/auth.schema";
 import { generateAccessToken } from "../utils/jwt.util";
 
 
