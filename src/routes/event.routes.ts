@@ -4,7 +4,7 @@ import { authenticate, authorize, requireOwnership } from "../middlewares/auth";
 import prisma from "../lib/prisma";
 import { getEvent, getEvents, getMyEvents } from "../controllers/event.controllers";
 import { validate } from "../middlewares/validate";
-import { getEventSchema } from "../schemas/event.schema";
+import { eventIdParamSchema } from "../schemas/event.schema";
 
 const router = Router();
 
@@ -12,7 +12,7 @@ router.get("/", asyncHandler(getEvents));
 
 router.get("/mine", authenticate, authorize('ORGANIZER'), asyncHandler(getMyEvents));
 
-router.get("/:eventId", validate(getEventSchema, "params"), asyncHandler(getEvent));
+router.get("/:eventId", validate(eventIdParamSchema, "params"), asyncHandler(getEvent));
 
 router.post("/", authenticate, authorize('ADMIN', 'ORGANIZER'), (req, res) => {
   res.json({ message: "one event created" });

@@ -1,14 +1,14 @@
 import { z } from "zod";
 import { EventStatus } from "../../prisma/generated/enums";
 
-export const getEventSchema = z.object({
+export const eventIdParamSchema = z.object({
   eventId: z.uuid().meta({
     description: "The unique identifier of the event",
     example: "550e8400-e29b-41d4-a716-446655440000",
   })
 });
 
-export type GetEventInput = z.infer<typeof getEventSchema>;
+export type EventIdParamInput = z.infer<typeof eventIdParamSchema>;
 
 export const EventSchema = z.object({
   id: z.uuid().meta({ example: "3f6d2c8a-5b1e-4e7a-9d34-8c2a1f0b7e55" }),

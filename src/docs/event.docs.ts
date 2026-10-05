@@ -3,7 +3,8 @@ import { bearerAuth, registry } from "./registry";
 import { jsonResponse } from "./helpers";
 import { jsendSuccess } from "../schemas/jsend.schema";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
-import { EventSchema } from "../schemas/event.schema";
+import { eventIdParamSchema, EventSchema } from "../schemas/event.schema";
+import { TicketTypeSummarySchema } from "../schemas/ticketType.schema";
 
 const Event = registry.register("Event", EventSchema);
 
@@ -39,6 +40,24 @@ registry.registerPath({
     200: jsonResponse("List of all organizer's events", OwnEventsSuccess),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     403: jsonResponse("You do not have permission to perform this action", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  }
+});
+
+const EventDetailSchema = Event.extend({ ticketTypes: z.array(TicketTypeSummarySchema) });
+const EventSuccess = registry.register("AllEventsSuccess", jsendSuccess(z.object({ event: EventDetailSchema })));
+
+registry.registerPath({
+  method: "get",
+  path: "/events/{id}",
+  tags: ["Events"],
+  summary: "Get an event",
+  description: "Returns one published event with its ticket types and remaining spots. Public, no login required.",
+  request: { params: eventIdParamSchema },
+  responses: {
+    200: jsonResponse("List of published events", EventSuccess),
+    400: jsonResponse("Invalid UUID format.", ValidationFailResponse),
+    404: jsonResponse("Event not found", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
 });
