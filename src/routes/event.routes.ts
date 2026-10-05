@@ -2,16 +2,17 @@ import Router from "express";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { authenticate, authorize, requireOwnership } from "../middlewares/auth";
 import prisma from "../lib/prisma";
+import { getEvent, getEvents, getMyEvents } from "../controllers/event.controllers";
+import { validate } from "../middlewares/validate";
+import { getEventSchema } from "../schemas/event.schema";
 
 const router = Router();
 
-router.get("/", (req, res) => {
-  res.json({ message: "get alll events" });
-});
+router.get("/", asyncHandler(getEvents));
 
-router.get("/:eventId", (req, res) => {
-  res.json({ eventId: req.params.eventId });
-});
+router.get("/mine", authenticate, authorize('ORGANIZER'), asyncHandler(getMyEvents));
+
+router.get("/:eventId", validate(getEventSchema, "params"), asyncHandler(getEvent));
 
 router.post("/", authenticate, authorize('ADMIN', 'ORGANIZER'), (req, res) => {
   res.json({ message: "one event created" });
@@ -20,6 +21,16 @@ router.post("/", authenticate, authorize('ADMIN', 'ORGANIZER'), (req, res) => {
 router.patch("/:eventId", authenticate, authorize('ADMIN', 'ORGANIZER'), requireOwnership({ model: prisma.event, paramName: "eventId", ownerField: "organizerId", resourceName: "Event" }), (req, res) => {
   res.json({ message: "one event patched" });
 });
+
+// POST   /events
+// PATCH  /events/:id
+// POST   /events/:id/publish
+// POST   /events/:id/cancel
+
+// POST   /events/:id/ticket-types
+// PATCH  /events/:id/ticket-types/:ticketTypeId
+
+// DELETE   /events/:id
 
 export default router;
 
