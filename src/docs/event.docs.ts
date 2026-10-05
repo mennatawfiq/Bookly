@@ -8,8 +8,8 @@ import { TicketTypeSummarySchema } from "../schemas/ticketType.schema";
 
 const Event = registry.register("Event", EventSchema);
 
-const AllEvents = registry.register("AllEvents", Event.omit({ status: true, createdAt: true, updatedAt: true }));
-const AllEventsSuccess = registry.register("AllEventsSuccess", jsendSuccess(z.object({ events: z.array(AllEvents) })));
+const AllEvent = registry.register("AllEvent", Event.omit({ status: true, createdAt: true, updatedAt: true }));
+const AllEventsSuccess = registry.register("AllEventsSuccess", jsendSuccess(z.object({ events: z.array(AllEvent) })));
 
 registry.registerPath({
   method: "get",
@@ -45,19 +45,20 @@ registry.registerPath({
 });
 
 const EventDetailSchema = Event.extend({ ticketTypes: z.array(TicketTypeSummarySchema) });
-const EventSuccess = registry.register("AllEventsSuccess", jsendSuccess(z.object({ event: EventDetailSchema })));
+const EventSuccess = registry.register("EventSuccess", jsendSuccess(z.object({ event: EventDetailSchema })));
 
 registry.registerPath({
   method: "get",
   path: "/events/{id}",
   tags: ["Events"],
   summary: "Get an event",
-  description: "Returns one published event with its ticket types and remaining spots. Public, no login required.",
-  request: { params: eventIdParamSchema },
+  description:
+    "Returns one event with its ticket types and remaining spots. Published events are visible to everyone. Draft and cancelled events are visible only to their organizer and to admins. Sending a token is optional.",
+  security: [{}, { [bearerAuth.name]: [] }],   // token optional
   responses: {
-    200: jsonResponse("List of published events", EventSuccess),
-    400: jsonResponse("Invalid UUID format.", ValidationFailResponse),
-    404: jsonResponse("Event not found", MessageFailResponse),
+    200: jsonResponse("The event", EventSuccess),
+    401: jsonResponse("Invalid or expired UUID", ValidationFailResponse),
+    404: jsonResponse("Event not found, or you are not allowed to see it", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
-  }
+  },
 });

@@ -1,6 +1,6 @@
 import Router from "express";
 import { asyncHandler } from "../middlewares/asyncHandler";
-import { authenticate, authorize, requireOwnership } from "../middlewares/auth";
+import { authenticate, authorize, optionalAuthenticate, requireOwnership } from "../middlewares/auth";
 import prisma from "../lib/prisma";
 import { getEvent, getEvents, getMyEvents } from "../controllers/event.controllers";
 import { validate } from "../middlewares/validate";
@@ -12,7 +12,7 @@ router.get("/", asyncHandler(getEvents));
 
 router.get("/mine", authenticate, authorize('ORGANIZER'), asyncHandler(getMyEvents));
 
-router.get("/:eventId", validate(eventIdParamSchema, "params"), asyncHandler(getEvent));
+router.get("/:eventId", optionalAuthenticate, validate(eventIdParamSchema, "params"), asyncHandler(getEvent));
 
 router.post("/", authenticate, authorize('ADMIN', 'ORGANIZER'), (req, res) => {
   res.json({ message: "one event created" });

@@ -1,5 +1,6 @@
 import { AppError } from "../errorhandling/appError";
 import prisma from "../lib/prisma";
+import { AuthenticatedUser } from "../types/auth";
 
 
 export async function getEventsService() {
@@ -36,24 +37,35 @@ export async function getMyEventsService(userId: string) {
 
 }
 
-export async function getEventService(eventId: string) {
+const canViewEvent = (event: { organizerId: string, status: string }, user?: AuthenticatedUser) => {
+
+  return (event.status === "PUBLISHED" || user?.role === "ADMIN" || event.organizerId === user?.id);
+
+}
+
+export async function getEventService(eventId: string, user?: AuthenticatedUser) {
 
   const event = await prisma.event.findUnique({
     where: {
-      id: eventId,
-      status: "PUBLISHED"
-    },
+      id: eventId
+    },          // no status filter anymore
     select: {
       id: true,
+      organizerId: true,
       title: true,
       description: true,
+      location: true,
       startsAt: true,
       endsAt: true,
-      location: true,
+      status: true,
+      createdAt: true,
+      ticketTypes: {
+        select: { id: true, type: true, capacity: true, remaining: true },
+      }
     }
   });
 
-  if (!event) {
+  if (!event || !canViewEvent(event, user)) {
     throw new AppError(404, "Event not found")
   }
 

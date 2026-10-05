@@ -32,7 +32,7 @@ export const getEvent = async (req: Request, res: Response) => {
     throw new AppError(400, "Invalid eventId");
   }
 
-  const event = await getEventService(eventId);
+  const event = await getEventService(eventId, req.user);
 
   res.jsend.success({ event }, 200);
 
