@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getEventsService, getEventService, getMyEventsService } from "../services/event.services";
+import { getEventsService, getEventService, getMyEventsService, postEventService } from "../services/event.services";
 import { AppError } from "../errorhandling/appError";
 
 export const getEvents = async (req: Request, res: Response) => {
@@ -37,3 +37,17 @@ export const getEvent = async (req: Request, res: Response) => {
   res.jsend.success({ event }, 200);
 
 };
+
+export const postEvent = async (req: Request, res: Response) => {
+
+  const eventInfo = req.body;
+  const organizerId = req.user?.id;
+
+  if (typeof organizerId !== "string") {
+    throw new AppError(400, "Invalid organizerId");
+  }
+
+  const event = await postEventService(eventInfo, organizerId);
+
+  res.jsend.success({ event }, 201);
+}

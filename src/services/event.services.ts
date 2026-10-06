@@ -1,5 +1,6 @@
 import { AppError } from "../errorhandling/appError";
 import prisma from "../lib/prisma";
+import { CreateEventInput } from "../schemas/event.schema";
 import { AuthenticatedUser } from "../types/auth";
 
 
@@ -71,3 +72,31 @@ export async function getEventService(eventId: string, user?: AuthenticatedUser)
 
   return event;
 };
+
+export async function postEventService(eventInfo: CreateEventInput, organizerId: string) {
+
+  const event = await prisma.event.create({
+    data: {
+      organizerId: organizerId,
+      status: "DRAFT",
+      title: eventInfo.title,
+      description: eventInfo.description,
+      location: eventInfo.location,
+      startsAt: new Date(eventInfo.startsAt),
+      endsAt: new Date(eventInfo.endsAt),
+    },
+    select: {
+      id: true,
+      organizerId: true,
+      title: true,
+      description: true,
+      location: true,
+      startsAt: true,
+      endsAt: true,
+      status: true,
+      createdAt: true,
+    }
+  });
+
+  return event;
+}

@@ -3,7 +3,7 @@ import { bearerAuth, registry } from "./registry";
 import { jsonResponse } from "./helpers";
 import { jsendSuccess } from "../schemas/jsend.schema";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
-import { eventIdParamSchema, EventSchema } from "../schemas/event.schema";
+import { CreateEventSchema, EventSchema } from "../schemas/event.schema";
 import { TicketTypeSummarySchema } from "../schemas/ticketType.schema";
 
 const Event = registry.register("Event", EventSchema);
@@ -59,6 +59,33 @@ registry.registerPath({
     200: jsonResponse("The event", EventSuccess),
     401: jsonResponse("Invalid or expired UUID", ValidationFailResponse),
     404: jsonResponse("Event not found, or you are not allowed to see it", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  },
+});
+
+
+const CreateEventRequest = registry.register("CreateEventRequest", CreateEventSchema);
+const NewEvent = registry.register("NewEvent", Event.omit({ updatedAt: true }));
+const NewEventSuccess = registry.register("NewEventSuccess", jsendSuccess(z.object({ event: NewEvent })));
+
+registry.registerPath({
+  method: "post",
+  path: "/events",
+  tags: ["Events"],
+  summary: "Create an event",
+  description:
+    "Creates a new event owned by the authenticated user, with status `DRAFT`. Requires the ORGANIZER or ADMIN role. `startsAt` must be in the future and `endsAt` must be after `startsAt`. Drafts are not visible to the public until published.", security: [{ [bearerAuth.name]: [] }],
+  request: {
+    body: {
+      required: true,
+      content: { "application/json": { schema: CreateEventRequest } },
+    }
+  },
+  responses: {
+    201: jsonResponse("Event created as a draft", NewEventSuccess),
+    400: jsonResponse("Validation failed", ValidationFailResponse),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    403: jsonResponse("Not an ORGANIZER or ADMIN", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   },
 });
