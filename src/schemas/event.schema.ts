@@ -25,13 +25,17 @@ export const EventSchema = z.object({
   updatedAt: z.iso.datetime().meta({ example: "2026-10-05T10:00:00.000Z" }),
 });
 
-export const CreateEventSchema = EventSchema.omit({
-  id: true,
-  organizerId: true,
-  status: true,
-  createdAt: true,
-  updatedAt: true
-})
+export const EventInputSchema = z.object({
+  title: z.string().trim().meta({ example: "Cairo Jazz Night" }),
+  description: z.string().trim().meta({
+    example: "An evening of live jazz with local artists. Doors open at 6 PM.",
+  }),
+  location: z.string().trim().meta({ example: "Cairo Opera House, Zamalek, Cairo" }),
+  startsAt: z.iso.datetime({ offset: true }).meta({ example: "2027-09-20T18:00:00.000Z" }),
+  endsAt: z.iso.datetime({ offset: true }).meta({ example: "2027-09-20T21:00:00.000Z" }),
+});
+
+export const CreateEventSchema = EventInputSchema
   .refine(
     (data) => new Date(data.startsAt) > new Date(),
     {
@@ -47,3 +51,10 @@ export const CreateEventSchema = EventSchema.omit({
   );
 export type CreateEventInput = z.infer<typeof CreateEventSchema>;
 
+export const PatchEventSchema = EventInputSchema.partial().refine(
+  (data) => Object.keys(data).length > 0,
+  {
+    message: "At least one field must be provided",
+  }
+);
+export type PatchEventInput = z.infer<typeof PatchEventSchema>;

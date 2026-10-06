@@ -1,6 +1,6 @@
 import { AppError } from "../errorhandling/appError";
 import prisma from "../lib/prisma";
-import { CreateEventInput } from "../schemas/event.schema";
+import { CreateEventInput, PatchEventInput } from "../schemas/event.schema";
 import { AuthenticatedUser } from "../types/auth";
 
 
@@ -99,4 +99,57 @@ export async function postEventService(eventInfo: CreateEventInput, organizerId:
   });
 
   return event;
-}
+
+};
+
+export async function patchEventService(eventId: string, eventInfo: PatchEventInput) {
+
+  const existingEvent = await prisma.event.findUnique({
+    where: { id: eventId }
+  });
+
+  if (!existingEvent) {
+    throw new AppError(404, "Event not found");
+  }
+
+  if (existingEvent.status !== "DRAFT") {
+    throw new AppError(400, "Event cannot be edited");
+  }
+
+  const startsAt = eventInfo.startsAt ? new Date(eventInfo.startsAt) : existingEvent.startsAt;
+
+  const endsAt = eventInfo.endsAt ? new Date(eventInfo.endsAt) : existingEvent.endsAt;
+
+  if (eventInfo.startsAt && startsAt < new Date()) {
+    throw new AppError(400, "startsAt must be in the future");
+  }
+
+  if (endsAt <= startsAt) {
+    throw new AppError(400, "endsAt must be after startsAt");
+  }
+
+  const updatedEvent = await prisma.event.update({
+    where: { id: eventId },
+    data: {
+      ...(eventInfo.title !== undefined && { title: eventInfo.title, }),
+      ...(eventInfo.description !== undefined && { description: eventInfo.description, }),
+      ...(eventInfo.location !== undefined && { location: eventInfo.location, }),
+      ...(eventInfo.startsAt !== undefined && { startsAt, }),
+      ...(eventInfo.endsAt !== undefined && { endsAt, }),
+    },
+    select: {
+      id: true,
+      organizerId: true,
+      title: true,
+      description: true,
+      location: true,
+      startsAt: true,
+      endsAt: true,
+      status: true,
+      createdAt: true,
+    }
+  });
+
+  return updatedEvent;
+
+};

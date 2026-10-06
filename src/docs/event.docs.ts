@@ -3,7 +3,7 @@ import { bearerAuth, registry } from "./registry";
 import { jsonResponse } from "./helpers";
 import { jsendSuccess } from "../schemas/jsend.schema";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
-import { CreateEventSchema, EventSchema } from "../schemas/event.schema";
+import { CreateEventSchema, EventSchema, PatchEventSchema } from "../schemas/event.schema";
 import { TicketTypeSummarySchema } from "../schemas/ticketType.schema";
 
 const Event = registry.register("Event", EventSchema);
@@ -66,7 +66,7 @@ registry.registerPath({
 
 const CreateEventRequest = registry.register("CreateEventRequest", CreateEventSchema);
 const NewEvent = registry.register("NewEvent", Event.omit({ updatedAt: true }));
-const NewEventSuccess = registry.register("NewEventSuccess", jsendSuccess(z.object({ event: NewEvent })));
+const EventCreatedSuccess = registry.register("EventCreatedSuccess", jsendSuccess(z.object({ event: NewEvent })));
 
 registry.registerPath({
   method: "post",
@@ -82,10 +82,38 @@ registry.registerPath({
     }
   },
   responses: {
-    201: jsonResponse("Event created as a draft", NewEventSuccess),
+    201: jsonResponse("Event created as a draft", EventCreatedSuccess),
     400: jsonResponse("Validation failed", ValidationFailResponse),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     403: jsonResponse("Not an ORGANIZER or ADMIN", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   },
+});
+
+const UpdateEventRequest = registry.register("UpdateEventRequest", PatchEventSchema);
+
+registry.registerPath({
+  method: "patch",
+  path: "/events/{id}",
+  tags: ["Events"],
+  summary: "Patch an event",
+  description: "Updates the details of an event you own (admins can update any event). Send only the fields you want to change, and at least one is required. Only events with status `DRAFT` can be edited. The final `startsAt` must be in the future and `endsAt` must be after `startsAt`.",
+  request: {
+    body: {
+      required: true,
+      content: { "application/json": { schema: UpdateEventRequest } }
+    }
+  },
+  responses: {
+    200: jsonResponse("The updated event", EventCreatedSuccess),
+    400: jsonResponse(
+      "Validation failed, or the resulting dates are invalid",
+      z.union([ValidationFailResponse, MessageFailResponse])
+    ),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    403: jsonResponse("Not an ORGANIZER or ADMIN", MessageFailResponse),
+    404: jsonResponse("Event not found, or it isn't yours", MessageFailResponse),
+    409: jsonResponse("The event is not a draft", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  }
 });
