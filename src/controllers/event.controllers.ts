@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getEventsService, getEventService, getMyEventsService, postEventService, patchEventService } from "../services/event.services";
+import { getEventsService, getEventService, getMyEventsService, postEventService, patchEventService, publishEventService } from "../services/event.services";
 import { AppError } from "../errorhandling/appError";
 
 export const getEvents = async (req: Request, res: Response) => {
@@ -64,6 +64,20 @@ export const patchEvent = async (req: Request, res: Response) => {
   const eventInfo = req.body;
 
   const event = await patchEventService(eventId, eventInfo);
+
+  res.jsend.success({ event }, 200);
+
+};
+
+export const publishEvent = async (req: Request, res: Response) => {
+
+  const { eventId } = req.params;
+
+  if (typeof eventId !== "string") {
+    throw new AppError(400, "Invalid eventId");
+  }
+
+  const event = await publishEventService(eventId);
 
   res.jsend.success({ event }, 200);
 

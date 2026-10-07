@@ -4,6 +4,19 @@ import { CreateEventInput, PatchEventInput } from "../schemas/event.schema";
 import { AuthenticatedUser } from "../types/auth";
 
 
+const eventSummarySelect = {
+  id: true,
+  organizerId: true,
+  title: true,
+  description: true,
+  location: true,
+  startsAt: true,
+  endsAt: true,
+  status: true,
+  createdAt: true,
+} as const;
+
+
 export async function getEventsService() {
 
   const events = await prisma.event.findMany({
@@ -85,17 +98,7 @@ export async function postEventService(eventInfo: CreateEventInput, organizerId:
       startsAt: new Date(eventInfo.startsAt),
       endsAt: new Date(eventInfo.endsAt),
     },
-    select: {
-      id: true,
-      organizerId: true,
-      title: true,
-      description: true,
-      location: true,
-      startsAt: true,
-      endsAt: true,
-      status: true,
-      createdAt: true,
-    }
+    select: eventSummarySelect
   });
 
   return event;
@@ -137,17 +140,45 @@ export async function patchEventService(eventId: string, eventInfo: PatchEventIn
       ...(eventInfo.startsAt !== undefined && { startsAt, }),
       ...(eventInfo.endsAt !== undefined && { endsAt, }),
     },
-    select: {
-      id: true,
-      organizerId: true,
-      title: true,
-      description: true,
-      location: true,
-      startsAt: true,
-      endsAt: true,
-      status: true,
-      createdAt: true,
-    }
+    select: eventSummarySelect
+  });
+
+  return updatedEvent;
+
+};
+
+export async function publishEventService(eventId: string) {
+
+  const existingEvent = await prisma.event.findUnique({
+    where: { id: eventId }
+  });
+
+  if (!existingEvent) {
+    throw new AppError(404, "Event not found");
+  }
+
+  if (existingEvent.status !== "DRAFT") {
+    throw new AppError(409, "Only draft events can be published");
+  }
+
+  if (existingEvent.startsAt <= new Date()) {
+    throw new AppError(409, "This event's start date has passed. Update it before publishing");
+  }
+
+  const ticketType = await prisma.ticketType.findFirst({
+    where: { eventId: eventId }
+  });
+
+  if (!ticketType) {
+    throw new AppError(409, "Add at least one ticket type before publishing");
+  }
+
+  const updatedEvent = await prisma.event.update({
+    where: { id: eventId },
+    data: {
+      status: "PUBLISHED"
+    },
+    select: eventSummarySelect
   });
 
   return updatedEvent;

@@ -2,7 +2,7 @@ import Router from "express";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { authenticate, authorize, optionalAuthenticate, requireOwnership } from "../middlewares/auth";
 import prisma from "../lib/prisma";
-import { getEvent, getEvents, getMyEvents, patchEvent, postEvent } from "../controllers/event.controllers";
+import { getEvent, getEvents, getMyEvents, patchEvent, postEvent, publishEvent } from "../controllers/event.controllers";
 import { validate } from "../middlewares/validate";
 import { eventIdParamSchema, CreateEventSchema, PatchEventSchema } from "../schemas/event.schema";
 
@@ -19,6 +19,12 @@ router.post("/", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(CreateE
 router.patch("/:eventId", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(eventIdParamSchema, "params"), validate(PatchEventSchema),
   requireOwnership({ model: prisma.event, paramName: "eventId", ownerField: "organizerId", resourceName: "Event" }),
   asyncHandler(patchEvent));
+
+router.post("/:eventId/publish", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(eventIdParamSchema, "params"),
+  requireOwnership({ model: prisma.event, paramName: "eventId", ownerField: "organizerId", resourceName: "Event" }),
+  asyncHandler(publishEvent)
+);
+
 
 // POST   /events
 // PATCH  /events/:id

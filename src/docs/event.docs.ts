@@ -3,10 +3,11 @@ import { bearerAuth, registry } from "./registry";
 import { jsonResponse } from "./helpers";
 import { jsendSuccess } from "../schemas/jsend.schema";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
-import { CreateEventSchema, EventSchema, PatchEventSchema } from "../schemas/event.schema";
+import { CreateEventSchema, eventIdParamSchema, EventSchema, PatchEventSchema } from "../schemas/event.schema";
 import { TicketTypeSummarySchema } from "../schemas/ticketType.schema";
 
 const Event = registry.register("Event", EventSchema);
+const EventIdParamSchema = registry.register("EventIdParamSchema", eventIdParamSchema);
 
 const AllEvent = registry.register("AllEvent", Event.omit({ status: true, createdAt: true, updatedAt: true }));
 const AllEventsSuccess = registry.register("AllEventsSuccess", jsendSuccess(z.object({ events: z.array(AllEvent) })));
@@ -49,12 +50,13 @@ const EventSuccess = registry.register("EventSuccess", jsendSuccess(z.object({ e
 
 registry.registerPath({
   method: "get",
-  path: "/events/{id}",
+  path: "/events/{eventId}",
   tags: ["Events"],
   summary: "Get an event",
   description:
     "Returns one event with its ticket types and remaining spots. Published events are visible to everyone. Draft and cancelled events are visible only to their organizer and to admins. Sending a token is optional.",
   security: [{}, { [bearerAuth.name]: [] }],   // token optional
+  request: { params: EventIdParamSchema },
   responses: {
     200: jsonResponse("The event", EventSuccess),
     401: jsonResponse("Invalid or expired UUID", ValidationFailResponse),
@@ -94,11 +96,12 @@ const UpdateEventRequest = registry.register("UpdateEventRequest", PatchEventSch
 
 registry.registerPath({
   method: "patch",
-  path: "/events/{id}",
+  path: "/events/{eventId}",
   tags: ["Events"],
   summary: "Patch an event",
   description: "Updates the details of an event you own (admins can update any event). Send only the fields you want to change, and at least one is required. Only events with status `DRAFT` can be edited. The final `startsAt` must be in the future and `endsAt` must be after `startsAt`.",
   request: {
+    params: EventIdParamSchema,
     body: {
       required: true,
       content: { "application/json": { schema: UpdateEventRequest } }
@@ -114,6 +117,25 @@ registry.registerPath({
     403: jsonResponse("Not an ORGANIZER or ADMIN", MessageFailResponse),
     404: jsonResponse("Event not found, or it isn't yours", MessageFailResponse),
     409: jsonResponse("The event is not a draft", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  }
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/events/{eventId}/publish",
+  tags: ["Events"],
+  summary: "Publish a drafted event",
+  description: "Changes a `DRAFT` event to `PUBLISHED`, making it visible to everyone. Requires the ORGANIZER or ADMIN role and ownership of the event (admins can publish any event). The event must have a start date in the future and at least one ticket type.",
+  security: [{ [bearerAuth.name]: [] }],
+  request: { params: EventIdParamSchema },
+  responses: {
+    200: jsonResponse("The published event", EventCreatedSuccess),
+    400: jsonResponse("The event id is not a valid UUID", ValidationFailResponse),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    403: jsonResponse("Not an ORGANIZER or ADMIN", MessageFailResponse),
+    404: jsonResponse("Event not found, or it isn't yours", MessageFailResponse),
+    409: jsonResponse("Not a draft, the start date has passed, or the event has no ticket types", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
 });
