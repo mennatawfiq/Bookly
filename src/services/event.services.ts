@@ -1,6 +1,7 @@
 import { AppError } from "../errorhandling/appError";
 import prisma from "../lib/prisma";
 import { CreateEventInput, PatchEventInput } from "../schemas/event.schema";
+import { PostTicketTypeInput } from "../schemas/ticketType.schema";
 import { AuthenticatedUser } from "../types/auth";
 
 
@@ -16,6 +17,7 @@ const eventSummarySelect = {
   createdAt: true,
 } as const;
 
+const ticketTypeSummarySelect = { id: true, type: true, capacity: true, remaining: true } as const;
 
 export async function getEventsService() {
 
@@ -74,7 +76,7 @@ export async function getEventService(eventId: string, user?: AuthenticatedUser)
       status: true,
       createdAt: true,
       ticketTypes: {
-        select: { id: true, type: true, capacity: true, remaining: true },
+        select: ticketTypeSummarySelect,
       }
     }
   });
@@ -183,4 +185,58 @@ export async function publishEventService(eventId: string) {
 
   return updatedEvent;
 
+};
+
+// export async function cancelEventService(eventId: string) { // to be completed after implementing booking routes as we'll need cancel bookings here
+
+//   const existingEvent = await prisma.event.findUnique({
+//     where: { id: eventId }
+//   });
+
+//   if (!existingEvent) {
+//     throw new AppError(404, "Event not found");
+//   }
+
+//   if (existingEvent.status === "CANCELLED") {
+//     throw new AppError(409, "Can't cancel a cancelled event");
+//   }
+
+
+//   const updatedEvent = await prisma.event.update({
+//     where: { id: eventId },
+//     data: {
+//       status: "CANCELLED"
+//     },
+//     select: eventSummarySelect
+//   });
+
+//   return updatedEvent;
+
+// };
+
+export async function postTicketTypeService(eventId: string, ticketTypeInfo: PostTicketTypeInput) {
+
+  const existingEvent = await prisma.event.findUnique({
+    where: { id: eventId }
+  });
+
+  if (!existingEvent) {
+    throw new AppError(404, "Event not found");
+  }
+
+  if (existingEvent.status === "CANCELLED") {
+    throw new AppError(409, "Only draft or published events can recieve new ticket types");
+  }
+
+  const ticketType = await prisma.ticketType.create({
+    data: {
+      eventId: eventId,
+      type: ticketTypeInfo.type,
+      capacity: ticketTypeInfo.capacity,
+      remaining: ticketTypeInfo.capacity
+    },
+    select: ticketTypeSummarySelect
+  });
+
+  return ticketType;
 };

@@ -2,9 +2,10 @@ import Router from "express";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { authenticate, authorize, optionalAuthenticate, requireOwnership } from "../middlewares/auth";
 import prisma from "../lib/prisma";
-import { getEvent, getEvents, getMyEvents, patchEvent, postEvent, publishEvent } from "../controllers/event.controllers";
+import { getEvent, getEvents, getMyEvents, patchEvent, postEvent, postTicketType, publishEvent } from "../controllers/event.controllers";
 import { validate } from "../middlewares/validate";
 import { eventIdParamSchema, CreateEventSchema, PatchEventSchema } from "../schemas/event.schema";
+import { PostTicketTypeSchema } from "../schemas/ticketType.schema";
 
 const router = Router();
 
@@ -18,18 +19,26 @@ router.post("/", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(CreateE
 
 router.patch("/:eventId", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(eventIdParamSchema, "params"), validate(PatchEventSchema),
   requireOwnership({ model: prisma.event, paramName: "eventId", ownerField: "organizerId", resourceName: "Event" }),
-  asyncHandler(patchEvent));
+  asyncHandler(patchEvent)
+);
 
 router.post("/:eventId/publish", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(eventIdParamSchema, "params"),
   requireOwnership({ model: prisma.event, paramName: "eventId", ownerField: "organizerId", resourceName: "Event" }),
   asyncHandler(publishEvent)
 );
 
+// router.post("/:eventId/cancel", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(eventIdParamSchema, "params"),
+//   requireOwnership({ model: prisma.event, paramName: "eventId", ownerField: "organizerId", resourceName: "Event" }),
+//   asyncHandler(cancelEvent)
+// );
 
-// POST   /events
-// PATCH  /events/:id
-// POST   /events/:id/publish // must check the event has ticket types set first
+
 // POST   /events/:id/cancel
+
+router.post("/:eventId/ticket-types", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(eventIdParamSchema, "params"), validate(PostTicketTypeSchema),
+  requireOwnership({ model: prisma.event, paramName: "eventId", ownerField: "organizerId", resourceName: "Event" }),
+  asyncHandler(postTicketType)
+);
 
 // POST   /events/:id/ticket-types
 // PATCH  /events/:id/ticket-types/:ticketTypeId

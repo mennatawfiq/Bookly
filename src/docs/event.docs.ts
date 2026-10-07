@@ -4,7 +4,7 @@ import { jsonResponse } from "./helpers";
 import { jsendSuccess } from "../schemas/jsend.schema";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
 import { CreateEventSchema, eventIdParamSchema, EventSchema, PatchEventSchema } from "../schemas/event.schema";
-import { TicketTypeSummarySchema } from "../schemas/ticketType.schema";
+import { PostTicketTypeSchema, TicketTypeSummarySchema } from "../schemas/ticketType.schema";
 
 const Event = registry.register("Event", EventSchema);
 const EventIdParamSchema = registry.register("EventIdParamSchema", eventIdParamSchema);
@@ -136,6 +136,34 @@ registry.registerPath({
     403: jsonResponse("Not an ORGANIZER or ADMIN", MessageFailResponse),
     404: jsonResponse("Event not found, or it isn't yours", MessageFailResponse),
     409: jsonResponse("Not a draft, the start date has passed, or the event has no ticket types", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  }
+});
+
+const PostTicketTypeRequest = registry.register("PostTicketTypeRequest", PostTicketTypeSchema);
+const TicketTypeCreatedSuccess = registry.register("TicketTypeCreatedSuccess", TicketTypeSummarySchema);
+
+registry.registerPath({
+  method: "post",
+  path: "/events/{eventId}/ticket-types",
+  tags: ["Events"],
+  summary: "Add ticket type to an event",
+  description: "Adds a ticket type (`GENERAL` or `VIP`) with a capacity to an event you own (admins can add to any event). Allowed for `DRAFT` and `PUBLISHED` events, not for `CANCELLED` ones. An event can have only one ticket type of each kind. `remaining` starts equal to `capacity`.",
+  security: [{ [bearerAuth.name]: [] }],
+  request: {
+    params: EventIdParamSchema,
+    body: {
+      required: true,
+      content: { "application/json": { schema: PostTicketTypeRequest } }
+    }
+  },
+  responses: {
+    200: jsonResponse("The new ticket type", TicketTypeCreatedSuccess),
+    400: jsonResponse("Validation failed", ValidationFailResponse),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    403: jsonResponse("Not an ORGANIZER or ADMIN", MessageFailResponse),
+    404: jsonResponse("Event not found, or it isn't yours", MessageFailResponse),
+    409: jsonResponse("The event is cancelled, or it already has a ticket type of this kind", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
 });
