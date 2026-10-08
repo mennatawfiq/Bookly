@@ -4,7 +4,7 @@ import { jsonResponse } from "./helpers";
 import { jsendSuccess } from "../schemas/jsend.schema";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
 import { CreateEventSchema, eventIdParamSchema, EventSchema, PatchEventSchema } from "../schemas/event.schema";
-import { PostTicketTypeSchema, TicketTypeSummarySchema } from "../schemas/ticketType.schema";
+import { CreateTicketTypeSchema, PatchTicketTypeSchema, TicketTypeIdParamSchema, TicketTypeSummarySchema } from "../schemas/ticketType.schema";
 
 const Event = registry.register("Event", EventSchema);
 const EventIdParamSchema = registry.register("EventIdParamSchema", eventIdParamSchema);
@@ -140,8 +140,8 @@ registry.registerPath({
   }
 });
 
-const PostTicketTypeRequest = registry.register("PostTicketTypeRequest", PostTicketTypeSchema);
-const TicketTypeCreatedSuccess = registry.register("TicketTypeCreatedSuccess", TicketTypeSummarySchema);
+const PostTicketTypeRequest = registry.register("PostTicketTypeRequest", CreateTicketTypeSchema);
+const TicketTypeSuccess = registry.register("TicketTypeSuccess", TicketTypeSummarySchema);
 
 registry.registerPath({
   method: "post",
@@ -158,12 +158,40 @@ registry.registerPath({
     }
   },
   responses: {
-    200: jsonResponse("The new ticket type", TicketTypeCreatedSuccess),
+    200: jsonResponse("The new ticket type", TicketTypeSuccess),
     400: jsonResponse("Validation failed", ValidationFailResponse),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     403: jsonResponse("Not an ORGANIZER or ADMIN", MessageFailResponse),
     404: jsonResponse("Event not found, or it isn't yours", MessageFailResponse),
     409: jsonResponse("The event is cancelled, or it already has a ticket type of this kind", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  }
+});
+
+const PatchTicketTypeRequest = registry.register("PatchTicketTypeRequest", PatchTicketTypeSchema);
+
+
+registry.registerPath({
+  method: "patch",
+  path: "/events/{eventId}/ticket-types/{ticketTypeId}",
+  tags: ["Events"],
+  summary: "Patch an event ticket type",
+  description: "Updates the capacity or kind of a ticket type for an event you own (admins can update any event). Allowed for DRAFT and PUBLISHED events, but not CANCELLED events. Capacity cannot be lower than the number of active tickets already booked. The ticket kind cannot be changed once tickets have been booked.",
+  security: [{ [bearerAuth.name]: [] }],
+  request: {
+    params: TicketTypeIdParamSchema,
+    body: {
+      required: true,
+      content: { "application/json": { schema: PatchTicketTypeRequest } }
+    }
+  },
+  responses: {
+    200: jsonResponse("The updated ticket type", TicketTypeSuccess),
+    400: jsonResponse("Validation failed", ValidationFailResponse),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    403: jsonResponse("Not an ORGANIZER or ADMIN", MessageFailResponse),
+    404: jsonResponse("Event or ticket type not found, or the event isn't yours", MessageFailResponse),
+    409: jsonResponse("The event is cancelled, or the new capacity is lower than the number of booked tickets, or kind can't be changed due to active bookings", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
 });
