@@ -299,3 +299,23 @@ export async function patchTicketTypeService(eventId: string, ticketTypeId: stri
   return result;
 
 };
+export const deleteEventService = async (eventId: string) => {
+
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { status: true },
+  });
+
+  if (!event) {
+    throw new AppError(404, "Event not found");
+  }
+
+  if (event.status !== "CANCELLED") {
+    throw new AppError(409, "Only cancelled events can be deleted");
+  }
+
+  await prisma.event.delete({
+    where: { id: eventId },
+  });
+
+};

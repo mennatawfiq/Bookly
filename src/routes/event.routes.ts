@@ -2,7 +2,7 @@ import Router from "express";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { authenticate, authorize, optionalAuthenticate, requireOwnership } from "../middlewares/auth";
 import prisma from "../lib/prisma";
-import { getEvent, getEvents, getMyEvents, patchEvent, patchTicketType, postEvent, postTicketType, publishEvent } from "../controllers/event.controllers";
+import { deleteEvent, getEvent, getEvents, getMyEvents, patchEvent, patchTicketType, postEvent, postTicketType, publishEvent } from "../controllers/event.controllers";
 import { validate } from "../middlewares/validate";
 import { eventIdParamSchema, CreateEventSchema, PatchEventSchema } from "../schemas/event.schema";
 import { CreateTicketTypeSchema, PatchTicketTypeSchema, TicketTypeIdParamSchema } from "../schemas/ticketType.schema";
@@ -45,7 +45,7 @@ router.patch("/:eventId/ticket-types/:ticketTypeId", authenticate, authorize('AD
   asyncHandler(patchTicketType)
 );
 
-// DELETE   /events/:id // delete only if status = "CANCELLED"
+router.post("/", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(eventIdParamSchema, "params"), asyncHandler(deleteEvent));
 
 export default router;
 

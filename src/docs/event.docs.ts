@@ -170,7 +170,6 @@ registry.registerPath({
 
 const PatchTicketTypeRequest = registry.register("PatchTicketTypeRequest", PatchTicketTypeSchema);
 
-
 registry.registerPath({
   method: "patch",
   path: "/events/{eventId}/ticket-types/{ticketTypeId}",
@@ -194,4 +193,24 @@ registry.registerPath({
     409: jsonResponse("The event is cancelled, or the new capacity is lower than the number of booked tickets, or kind can't be changed due to active bookings", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/events/{eventId}",
+  tags: ["Events"],
+  summary: "Delete an event",
+  description:
+    "Deletes a cancelled event owned by the authenticated user. Requires the ORGANIZER or ADMIN role.",
+  security: [{ [bearerAuth.name]: [] }],
+  request: { params: EventIdParamSchema },
+  responses: {
+    204: { description: "Event deleted successfully" },
+    400: jsonResponse("Validation failed", ValidationFailResponse),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    403: jsonResponse("Not an ORGANIZER or ADMIN", MessageFailResponse),
+    404: jsonResponse("Event not found, or it isn't yours", MessageFailResponse),
+    409: jsonResponse("Only cancelled events can be deleted", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  },
 });
