@@ -6,6 +6,16 @@ import prisma from "../lib/prisma";
 import { asyncHandler } from "./asyncHandler";
 import { OwnableDelegate, RequireOwnershipConfig } from "../types/auth";
 
+export const optionalAuthenticate = (req: Request, res: Response, next: NextFunction) => {
+
+  if (!req.headers.authorization) {
+    return next();
+  }
+
+  return authenticate(req, res, next);
+
+}
+
 export const authenticate = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
 
   const authorization = req.headers.authorization;
