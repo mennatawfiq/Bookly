@@ -52,7 +52,7 @@ export const authenticate = asyncHandler(async (req: Request, res: Response, nex
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
-      role: true,
+      role: true, // TODO: hotfix: select only deletedAt: null
     },
   });
 

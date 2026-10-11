@@ -1,11 +1,13 @@
 import Router from "express";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { authenticate, authorize } from "../middlewares/auth";
-import { getAllBookings } from "../controllers/booking.controllers";
+import { getAllBookings, getMyBookings } from "../controllers/booking.controllers";
 
 const router = Router();
 
 router.get("/", authenticate, authorize('ADMIN'), asyncHandler(getAllBookings));
+
+router.get("/mine", authenticate, asyncHandler(getMyBookings));
 
 router.get("/:bookingId", (req, res) => {
   res.json({ bookingId: req.params.bookingId });
@@ -19,7 +21,6 @@ export default router;
 
 // GET /bookings/mine
 // GET /bookings/:bookingId 
-// GET /bookings admins
 
 // POST /bookings
 
