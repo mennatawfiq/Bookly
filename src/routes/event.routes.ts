@@ -49,3 +49,4 @@ router.post("/", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(eventId
 
 export default router;
 
+// GET /events/:eventId/bookings
