@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BookingStatus, EventStatus } from "../../prisma/generated/enums";
+import { BookingStatus, EventStatus, TicketTypeKind } from "../../prisma/generated/enums";
 
 export const BookingListItemSchema = z.object({
   id: z.uuid().meta({ example: "88bf6c1e-3d2a-4a57-9c1e-2f4a8e6d1b90" }),
@@ -32,4 +32,36 @@ export const UserBookingListItemSchema = z.object({
   }),
   activeTicketsCount: z.int().min(0).meta({ example: 4 }),
   cancelledTicketsCount: z.int().min(0).meta({ example: 0 })
+});
+
+export const bookingIdParamSchema = z.object({
+  bookingId: z.uuid().meta({
+    description: "The unique identifier of the Booking",
+    example: "88bf6c1e-3d2a-4a57-9c1e-2f4a8e6d1b90",
+  })
+});
+
+export type BookingIdParamInput = z.infer<typeof bookingIdParamSchema>;
+
+export const UserBookingDetailSchema = z.object({
+  id: z.uuid().meta({ example: "c2a9e1d4-8f3b-4b6a-a1d7-9e5f0c3b2a68" }),
+  eventId: z.uuid().meta({ example: "3f6d2c8a-5b1e-4e7a-9d34-8c2a1f0b7e55" }),
+  status: z.enum(BookingStatus).meta({ example: "CONFIRMED" }),
+  createdAt: z.iso.datetime().meta({ example: "2026-10-05T10:00:00.000Z" }),
+  cancelledAt: z.iso.datetime().nullable().meta({ example: null }),
+  event: z.object({
+    title: z.string().meta({ example: "Cairo Jazz Night" }),
+    startsAt: z.iso.datetime({ offset: true }).meta({ example: "2027-09-20T18:00:00.000Z" }),
+    location: z.string().trim().meta({ example: "Cairo Opera House, Zamalek, Cairo" }),
+    endsAt: z.iso.datetime({ offset: true }).meta({ example: "2027-09-20T21:00:00.000Z" }),
+    status: z.enum(EventStatus).meta({ example: "PUBLISHED" }),
+  }),
+  activeTicketsCount: z.int().min(0).meta({ example: 3 }),
+  cancelledTicketsCount: z.int().min(0).meta({ example: 0 }),
+  activeTicketsByType: z.array(
+    z.object({
+      type: z.enum(TicketTypeKind).meta({ example: "GENERAL" }),
+      count: z.int().min(1).meta({ example: 2 }),
+    })
+  ).meta({ description: "Number of tickets that are not cancelled, grouped by ticket type. Types with no active tickets are not listed." }),
 });

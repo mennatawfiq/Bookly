@@ -4,7 +4,7 @@ import { env } from "../config/env";
 import { AppError } from "../errorhandling/appError";
 import prisma from "../lib/prisma";
 import { asyncHandler } from "./asyncHandler";
-import { OwnableDelegate, RequireOwnershipConfig } from "../types/auth";
+import { RequireOwnershipConfig } from "../types/auth";
 
 export const optionalAuthenticate = (req: Request, res: Response, next: NextFunction) => {
 
@@ -52,7 +52,7 @@ export const authenticate = asyncHandler(async (req: Request, res: Response, nex
   const user = await prisma.user.findUnique({
     where: { id: userId, deletedAt: null },
     select: {
-      role: true, // TODO: hotfix: select only deletedAt: null
+      role: true,
     },
   });
 

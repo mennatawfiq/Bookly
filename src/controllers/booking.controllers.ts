@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getAllBookingsService, getMyBookingsService } from "../services/booking.services";
+import { getAllBookingsService, getBookingService, getMyBookingsService } from "../services/booking.services";
 import { AppError } from "../errorhandling/appError";
 
 export const getAllBookings = async (req: Request, res: Response) => {
@@ -21,5 +21,19 @@ export const getMyBookings = async (req: Request, res: Response) => {
   const bookings = await getMyBookingsService(userId);
 
   res.jsend.success({ bookings }, 200);
+
+};
+
+export const getBooking = async (req: Request, res: Response) => {
+
+  const { bookingId } = req.params;
+
+  if (typeof bookingId !== "string") {
+    throw new AppError(400, "Invalid bookingId");
+  }
+
+  const booking = await getBookingService(bookingId);
+
+  res.jsend.success({ booking }, 200);
 
 };
