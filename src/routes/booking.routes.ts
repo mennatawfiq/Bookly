@@ -22,8 +22,9 @@ router.post("/", (req, res) => {
 
 export default router;
 
-// GET /bookings/:bookingId 
+// GET /bookings/:bookingId/tickets
 
-// POST /bookings
+// POST /bookings/:bookingId/cancel
 
-// PATCH /bookings/:bookingId/cancel
+// POST /bookings/:bookingId/tickets // increase number of tickets
+// POST /bookings/:bookingId/tickets/:ticketId/cancel // check BR-B6
