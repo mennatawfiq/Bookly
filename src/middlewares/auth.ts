@@ -100,11 +100,21 @@ export const requireOwnership = <T extends Record<string, unknown>>(config: Requ
       throw new AppError(404, `${config.resourceName} not found`);
     }
 
-    if (resource[config.ownerField] !== req.user?.id) {
-      throw new AppError(404, `${config.resourceName} not found`);
+    const user = req.user;
+
+    if (!user) {
+      throw new AppError(401, "Authenication required");
     }
 
-    next();
+    if (config.alsoAllow && await config.alsoAllow(resource, user)) {
+      next();
+    }
+
+    if (resource[config.ownerField] === req.user?.id) {
+      next();
+    }
+
+    throw new AppError(404, `${config.resourceName} not found`);
   });
 
-}
+};
