@@ -15,4 +15,5 @@ export type RequireOwnershipConfig<T> = {
   paramName: string;
   ownerField: keyof T;
   resourceName: string;
+  alsoAllow?: (resource: T, user: AuthenticatedUser) => Promise<boolean>;
 };
