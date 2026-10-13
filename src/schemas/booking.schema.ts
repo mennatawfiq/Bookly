@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BookingStatus, EventStatus, TicketTypeKind } from "../../prisma/generated/enums";
+import { BookingStatus, EventStatus, TicketStatus, TicketTypeKind } from "../../prisma/generated/enums";
 
 export const BookingListItemSchema = z.object({
   id: z.uuid().meta({ example: "88bf6c1e-3d2a-4a57-9c1e-2f4a8e6d1b90" }),
@@ -64,4 +64,14 @@ export const UserBookingDetailSchema = z.object({
       count: z.int().min(1).meta({ example: 2 }),
     })
   ).meta({ description: "Number of tickets that are not cancelled, grouped by ticket type. Types with no active tickets are not listed." }),
+});
+
+export const BookingTicketsDetailSchema = z.object({
+  id: z.uuid().meta({ example: "2f026d48-4a47-4489-b783-02e350203f81" }),
+  type: z.enum(TicketTypeKind).meta({ example: "GENERAL" }),
+  status: z.enum(TicketStatus).meta({ example: "VALID" }),
+  code: z.string().meta({ example: "k3Jx9mQ2vT8bW1nZ5pR7sY4cH6aD0eF2gL9uB3iO1xA" }),
+  createdAt: z.iso.datetime().meta({ example: "2026-10-05T10:00:00.000Z" }),
+  cancelledAt: z.iso.datetime().nullable().meta({ example: null }),
+  usedAt: z.iso.datetime().nullable().meta({ example: null }),
 });

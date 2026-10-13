@@ -3,7 +3,7 @@ import { bearerAuth, registry } from "./registry";
 import { jsonResponse } from "./helpers";
 import { jsendSuccess } from "../schemas/jsend.schema";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
-import { bookingIdParamSchema, BookingListItemSchema, UserBookingDetailSchema, UserBookingListItemSchema } from "../schemas/booking.schema";
+import { bookingIdParamSchema, BookingListItemSchema, BookingTicketsDetailSchema, UserBookingDetailSchema, UserBookingListItemSchema } from "../schemas/booking.schema";
 
 const BookingListItem = registry.register("BookingListItem", BookingListItemSchema);
 const AllBookingsSuccess = registry.register("AllBookingsSuccess", jsendSuccess(z.object({ bookings: z.array(BookingListItem) })));
@@ -51,12 +51,32 @@ registry.registerPath({
   path: "/bookings/{bookingId}",
   tags: ["Bookings"],
   summary: "Get a booking",
-  description: "Returns one booking with its event details and all of its tickets, including each ticket's QR `code` and status. Allowed for the user who made the booking, the organizer of the booking's event, and admins. Anyone else gets a 404, the same as when the booking does not exist. `activeTicketsCount` is the number of tickets that are not cancelled (valid or used). `cancelledTicketsCount` is the number of cancelled tickets. Requires authentication.",
+  description: "Returns one booking with its event details and all of its tickets. Allowed for the user who made the booking, the organizer of the booking's event, and admins. Anyone else gets a 404, the same as when the booking does not exist. `activeTicketsCount` is the number of tickets that are not cancelled (valid or used). `cancelledTicketsCount` is the number of cancelled tickets. Requires authentication.",
   security: [{ [bearerAuth.name]: [] }],
   request: { params: BookingIdParamSchema },
   responses: {
     200: jsonResponse("The booking", UserBookingDetailSuccess),
-    400: jsonResponse("Invalid bookingId", MessageFailResponse),
+    400: jsonResponse("Invalid bookingId", ValidationFailResponse),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    404: jsonResponse("Booking not found or you are not allowed to see it", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  }
+});
+
+const BookingTicketsDetail = registry.register("BookingTicketsDetail", BookingTicketsDetailSchema);
+const BookingTicketsDetailSuccess = registry.register("BookingTicketsDetailSuccess", jsendSuccess(z.object({ tickets: z.array(BookingTicketsDetail) })));
+
+registry.registerPath({
+  method: "get",
+  path: "/bookings/{bookingId}/tickets",
+  tags: ["Bookings"],
+  summary: "Get tickets of a booking",
+  description: "Returns all tickets of a booking, including each ticket's QR `code`, type, and status. Allowed only for the user who made the booking and for admins. Organizers cannot see the codes. Anyone else gets a 404, the same as when the booking does not exist. Requires authentication.",
+  security: [{ [bearerAuth.name]: [] }],
+  request: { params: BookingIdParamSchema },
+  responses: {
+    200: jsonResponse("The tickets", BookingTicketsDetailSuccess),
+    400: jsonResponse("Invalid bookingId", ValidationFailResponse),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     404: jsonResponse("Booking not found or you are not allowed to see it", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),

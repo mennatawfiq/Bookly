@@ -1,7 +1,7 @@
 import Router from "express";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { authenticate, authorize, requireOwnership } from "../middlewares/auth";
-import { getAllBookings, getBooking, getMyBookings } from "../controllers/booking.controllers";
+import { getAllBookings, getBooking, getMyBookings, getTickets } from "../controllers/booking.controllers";
 import prisma from "../lib/prisma";
 import { bookingIdParamSchema } from "../schemas/booking.schema";
 import { validate } from "../middlewares/validate";
@@ -16,15 +16,12 @@ router.get("/mine", authenticate, asyncHandler(getMyBookings));
 router.get("/:bookingId", authenticate, validate(bookingIdParamSchema, "params"), requireOwnership({ model: prisma.booking, paramName: "bookingId", ownerField: "userId", resourceName: "Booking", alsoAllow: isEventOrganizer }),
   asyncHandler(getBooking));
 
-router.post("/", (req, res) => {
-  res.json({ message: "one booking created" });
-});
+router.get("/:bookingId/tickets", authenticate, validate(bookingIdParamSchema, "params"),
+  requireOwnership({ model: prisma.booking, paramName: "bookingId", ownerField: "userId", resourceName: "Booking" }),
+  asyncHandler(getTickets));
 
 export default router;
 
-// GET /bookings/:bookingId/tickets
-
 // POST /bookings/:bookingId/cancel
-
 // POST /bookings/:bookingId/tickets // increase number of tickets
 // POST /bookings/:bookingId/tickets/:ticketId/cancel // check BR-B6
