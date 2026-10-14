@@ -158,7 +158,7 @@ registry.registerPath({
     }
   },
   responses: {
-    200: jsonResponse("The new ticket type", TicketTypeSuccess),
+    200: jsonResponse("The new ticket type", TicketTypeSuccess), // TODO: fix 201 not 200
     400: jsonResponse("Validation failed", ValidationFailResponse),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     403: jsonResponse("Not an ORGANIZER or ADMIN", MessageFailResponse),

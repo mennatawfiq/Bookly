@@ -45,7 +45,14 @@ router.patch("/:eventId/ticket-types/:ticketTypeId", authenticate, authorize('AD
   asyncHandler(patchTicketType)
 );
 
-router.post("/", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(eventIdParamSchema, "params"), asyncHandler(deleteEvent));
+router.post("/", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(eventIdParamSchema, "params"), asyncHandler(deleteEvent)); // TODO: fix this!!! method: delete, requireOwnership on resource
 
 export default router;
 
+// GET /events/:eventId/bookings // list event bookings, allowed for organizers and admins
+
+// POST /events/:eventId/bookings // create a booking, by the user
+
+// POST /events/:eventId/check-ins // send ticket QR code in the body
+
+// DELETE /events/:eventId/ticket-types/:ticketTypeId // delete only if there's no booked tickets
