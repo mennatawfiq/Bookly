@@ -197,20 +197,20 @@ registry.registerPath({
 
 registry.registerPath({
   method: "delete",
-  path: "/events/{eventId}",
+  path: "/events/{eventId}/ticket-types/{ticketTypeId}",
   tags: ["Events"],
-  summary: "Delete an event",
+  summary: "Delete a ticket type of an event",
   description:
-    "Deletes a cancelled event owned by the authenticated user. Requires the ORGANIZER or ADMIN role.",
+    "Deletes a ticket type of an event you own (admins can delete from any event). A ticket type cannot be deleted if any ticket was ever issued for it, even a cancelled one, if the event is cancelled, or if it is the only ticket type of a published event. Draft events can have zero ticket types. Requires the ORGANIZER or ADMIN role.",
   security: [{ [bearerAuth.name]: [] }],
-  request: { params: EventIdParamSchema },
+  request: { params: TicketTypeIdParamSchema },
   responses: {
-    204: { description: "Event deleted successfully" },
+    204: { description: "Ticket Type deleted successfully" },
     400: jsonResponse("Validation failed", ValidationFailResponse),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     403: jsonResponse("Not an ORGANIZER or ADMIN", MessageFailResponse),
-    404: jsonResponse("Event not found, or it isn't yours", MessageFailResponse),
-    409: jsonResponse("Only cancelled events can be deleted", MessageFailResponse),
+    404: jsonResponse("Event not found, ticket type not found, or it isn't yours", MessageFailResponse),
+    409: jsonResponse("Cancelled events cannot be modified, published events must have at least one ticket type, or ticket type has booked tickets", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   },
 });

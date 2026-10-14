@@ -1,4 +1,4 @@
-import { TicketTypeKind } from "../../prisma/generated/enums";
+import { EventStatus, TicketTypeKind } from "../../prisma/generated/enums";
 import { AppError } from "../errorhandling/appError";
 import prisma from "../lib/prisma";
 import { CreateEventInput, PatchEventInput } from "../schemas/event.schema";
@@ -295,6 +295,65 @@ export async function patchTicketTypeService(eventId: string, ticketTypeId: stri
 
     }
   );
+
+  return result;
+
+};
+
+export async function deleteTicketTypeService(eventId: string, ticketTypeId: string) {
+
+  const result = await prisma.$transaction(
+    async (tx) => {
+
+      // lock event row to enforce rule: for a published event, there must be at least one ticket type. so case the of deleting last ticket type of a published event doesn't happen 
+      const eventRows = await tx.$queryRaw<{ id: string; status: EventStatus }[]>
+        `SELECT id, status FROM "Event" WHERE id = ${eventId} FOR UPDATE`; // must be locked in publishEventService too
+
+      const event = eventRows[0];
+
+      if (!event) {
+        throw new AppError(404, "Event not found");
+      }
+
+      if (event.status === "CANCELLED") {
+        throw new AppError(409, "Cancelled events cannot be modified");
+      }
+
+      // row locked so that no booking can happen while deleting this ticket type
+      const ticketTypeRows = await tx.$queryRaw<{ id: string }[]>
+        `SELECT id FROM "TicketType" WHERE id = ${ticketTypeId} AND "eventId" = ${eventId} FOR UPDATE`;
+
+      const ticketType = ticketTypeRows[0];
+
+      if (!ticketType) {
+        throw new AppError(404, "Ticket Type not found");
+      }
+
+      const ticketCount = await tx.ticket.count({
+        where: { ticketTypeId }
+      });
+
+      if (ticketCount > 0) {
+        throw new AppError(409, "Ticket Types with at least one booked ticket can't be deleted");
+      }
+
+      if (event.status === "PUBLISHED") {
+        const ticketTypeCount = await tx.ticketType.count({
+          where: { eventId }
+        });
+
+        if (ticketTypeCount < 2) {
+          throw new AppError(409, "Published events must have at least one ticket type");
+        }
+      }
+
+      // draft events can have 0 ticket types
+
+      await tx.ticketType.delete({
+        where: { id: ticketTypeId, eventId }
+      });
+
+    });
 
   return result;
 

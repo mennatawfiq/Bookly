@@ -2,7 +2,7 @@ import Router from "express";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { authenticate, authorize, optionalAuthenticate, requireOwnership } from "../middlewares/auth";
 import prisma from "../lib/prisma";
-import { getEvent, getEvents, getMyEvents, patchEvent, patchTicketType, postEvent, postTicketType, publishEvent } from "../controllers/event.controllers";
+import { deleteTicketType, getEvent, getEvents, getMyEvents, patchEvent, patchTicketType, postEvent, postTicketType, publishEvent } from "../controllers/event.controllers";
 import { validate } from "../middlewares/validate";
 import { eventIdParamSchema, CreateEventSchema, PatchEventSchema } from "../schemas/event.schema";
 import { CreateTicketTypeSchema, PatchTicketTypeSchema, TicketTypeIdParamSchema } from "../schemas/ticketType.schema";
@@ -45,6 +45,10 @@ router.patch("/:eventId/ticket-types/:ticketTypeId", authenticate, authorize('AD
   asyncHandler(patchTicketType)
 );
 
+router.delete("/:eventId/ticket-types/:ticketTypeId", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(TicketTypeIdParamSchema, "params"),
+  requireOwnership({ model: prisma.event, paramName: "eventId", ownerField: "organizerId", resourceName: "Event" }),
+  asyncHandler(deleteTicketType)
+);
 
 export default router;
 
@@ -53,5 +57,3 @@ export default router;
 // POST /events/:eventId/bookings // create a booking, by the user
 
 // POST /events/:eventId/check-ins // send ticket QR code in the body
-
-// DELETE /events/:eventId/ticket-types/:ticketTypeId // delete only if there's no booked tickets
