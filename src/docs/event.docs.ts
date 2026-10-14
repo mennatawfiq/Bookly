@@ -107,6 +107,7 @@ registry.registerPath({
       content: { "application/json": { schema: UpdateEventRequest } }
     }
   },
+  security: [{ [bearerAuth.name]: [] }],
   responses: {
     200: jsonResponse("The updated event", EventCreatedSuccess),
     400: jsonResponse(
@@ -158,7 +159,7 @@ registry.registerPath({
     }
   },
   responses: {
-    200: jsonResponse("The new ticket type", TicketTypeSuccess), // TODO: fix 201 not 200
+    201: jsonResponse("The new ticket type", TicketTypeSuccess),
     400: jsonResponse("Validation failed", ValidationFailResponse),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     403: jsonResponse("Not an ORGANIZER or ADMIN", MessageFailResponse),

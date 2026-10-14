@@ -152,37 +152,41 @@ export async function patchEventService(eventId: string, eventInfo: PatchEventIn
 
 export async function publishEventService(eventId: string) {
 
-  const existingEvent = await prisma.event.findUnique({
-    where: { id: eventId }
-  });
+  const updatedEvent = await prisma.$transaction(
+    async (tx) => {
 
-  if (!existingEvent) {
-    throw new AppError(404, "Event not found");
-  }
+      const eventRows = await tx.$queryRaw<{ id: string; status: EventStatus; startsAt: Date }[]>
+        `SELECT id, status, "startsAt" FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
 
-  if (existingEvent.status !== "DRAFT") {
-    throw new AppError(409, "Only draft events can be published");
-  }
+      const existingEvent = eventRows[0];
 
-  if (existingEvent.startsAt <= new Date()) {
-    throw new AppError(409, "This event's start date has passed. Update it before publishing");
-  }
+      if (!existingEvent) {
+        throw new AppError(404, "Event not found");
+      }
 
-  const ticketType = await prisma.ticketType.findFirst({
-    where: { eventId: eventId }
-  });
+      if (existingEvent.status !== "DRAFT") {
+        throw new AppError(409, "Only draft events can be published");
+      }
 
-  if (!ticketType) {
-    throw new AppError(409, "Add at least one ticket type before publishing");
-  }
+      if (existingEvent.startsAt <= new Date()) {
+        throw new AppError(409, "This event's start date has passed. Update it before publishing");
+      }
 
-  const updatedEvent = await prisma.event.update({
-    where: { id: eventId },
-    data: {
-      status: "PUBLISHED"
-    },
-    select: eventSummarySelect
-  });
+      const ticketTypeCount = await tx.ticketType.count({ where: { eventId } });
+
+      if (ticketTypeCount === 0) {
+        throw new AppError(409, "Add at least one ticket type before publishing");
+      }
+
+      return await tx.event.update({
+        where: { id: eventId },
+        data: {
+          status: "PUBLISHED"
+        },
+        select: eventSummarySelect
+      });
+    }
+  );
 
   return updatedEvent;
 
@@ -247,9 +251,10 @@ export async function patchTicketTypeService(eventId: string, ticketTypeId: stri
   const result = await prisma.$transaction(
     async (tx) => {
 
-      const existingEvent = await tx.event.findUnique({
-        where: { id: eventId }
-      });
+      const eventRows = await tx.$queryRaw<{ id: string; status: EventStatus }[]>
+        `SELECT id, status FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
+
+      const existingEvent = eventRows[0];
 
       if (!existingEvent) {
         throw new AppError(404, "Event not found");
@@ -259,10 +264,10 @@ export async function patchTicketTypeService(eventId: string, ticketTypeId: stri
         throw new AppError(409, "Cancelled events cannot be modified");
       }
 
-      const row = await tx.$queryRaw<{ id: string; capacity: number; remaining: number; type: TicketTypeKind }[]>
+      const ticketTypeRows = await tx.$queryRaw<{ id: string; capacity: number; remaining: number; type: TicketTypeKind }[]>
         `SELECT id, capacity, remaining, type FROM "TicketType" WHERE id = ${ticketTypeId} AND "eventId" = ${eventId} FOR UPDATE`; // row locked. booking service should lock the row too 
 
-      const existingTicketType = row[0];
+      const existingTicketType = ticketTypeRows[0];
 
       if (!existingTicketType) {
         throw new AppError(404, "Ticket Type not found");
