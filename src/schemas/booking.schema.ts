@@ -75,3 +75,12 @@ export const BookingTicketsDetailSchema = z.object({
   cancelledAt: z.iso.datetime().nullable().meta({ example: null }),
   usedAt: z.iso.datetime().nullable().meta({ example: null }),
 });
+
+export const EventBookingListItemSchema = UserBookingListItemSchema
+  .omit({ eventId: true, event: true })
+  .extend({
+    user: z.object({
+      name: z.string().meta({ example: "Jane Doe" }),
+      email: z.email().meta({ example: "jane@example.com" }),
+    })
+  });

@@ -363,3 +363,27 @@ export async function deleteTicketTypeService(eventId: string, ticketTypeId: str
   return result;
 
 };
+
+export async function getEventBookingsService(eventId: string) {
+
+  const bookings = await prisma.booking.findMany({
+    where: { eventId },
+    select: {
+      id: true, status: true, createdAt: true, cancelledAt: true,
+      user: { select: { name: true, email: true } },
+      tickets: { select: { status: true } }
+    },
+    orderBy: { createdAt: "desc" }
+  });
+
+  return bookings.map(({ tickets, ...booking }) => {
+    const cancelledTicketsCount = tickets.filter((t) => t.status === "CANCELLED").length;
+    const activeTicketsCount = tickets.length - cancelledTicketsCount;
+
+    return {
+      ...booking,
+      activeTicketsCount, cancelledTicketsCount
+    }
+  });
+
+};

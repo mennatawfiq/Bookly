@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getEventsService, getEventService, getMyEventsService, postEventService, patchEventService, publishEventService, postTicketTypeService, patchTicketTypeService, deleteTicketTypeService } from "../services/event.services";
+import { getEventsService, getEventService, getMyEventsService, postEventService, patchEventService, publishEventService, postTicketTypeService, patchTicketTypeService, deleteTicketTypeService, getEventBookingsService } from "../services/event.services";
 import { AppError } from "../errorhandling/appError";
 
 export const getEvents = async (req: Request, res: Response) => {
@@ -148,5 +148,19 @@ export const deleteTicketType = async (req: Request, res: Response) => {
   await deleteTicketTypeService(eventId, ticketTypeId);
 
   res.jsend.success(null, 204);
+
+};
+
+export const getEventBookings = async (req: Request, res: Response) => {
+
+  const { eventId } = req.params;
+
+  if (typeof eventId !== "string") {
+    throw new AppError(400, "Invalid eventId");
+  }
+
+  const bookings = await getEventBookingsService(eventId);
+
+  res.jsend.success({ bookings }, 200);
 
 };
