@@ -1,17 +1,9 @@
 import { z } from "zod";
 import { bearerAuth, registry } from "./registry";
 import { jsonResponse } from "./helpers";
-import { jsendSuccess } from "../schemas/jsend.schema";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
-import { CreateEventSchema, eventIdParamSchema, EventSchema, PatchEventSchema } from "../schemas/event.schema";
-import { CreateTicketTypeSchema, PatchTicketTypeSchema, TicketTypeIdParamSchema, TicketTypeSummarySchema } from "../schemas/ticketType.schema";
-import { EventBookingListItemSchema } from "../schemas/booking.schema";
-
-const Event = registry.register("Event", EventSchema);
-export const EventIdParamSchema = registry.register("EventIdParamSchema", eventIdParamSchema);
-
-const AllEvent = registry.register("AllEvent", Event.omit({ status: true, createdAt: true, updatedAt: true }));
-const AllEventsSuccess = registry.register("AllEventsSuccess", jsendSuccess(z.object({ events: z.array(AllEvent) })));
+import { TicketTypeIdParamSchema } from "../schemas/ticketType.schema";
+import { AllEventsSuccess, CreateEventRequest, EventBookingsSuccess, EventCreatedSuccess, EventIdParamSchema, EventSuccess, OwnEventsSuccess, PatchTicketTypeRequest, PostTicketTypeRequest, TicketTypeSuccess, UpdateEventRequest } from "./components";
 
 registry.registerPath({
   method: "get",
@@ -26,8 +18,6 @@ registry.registerPath({
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
 });
-
-const OwnEventsSuccess = registry.register("OwnEventsSuccess", jsendSuccess(z.object({ events: z.array(Event) })));
 
 registry.registerPath({
   method: "get",
@@ -46,9 +36,6 @@ registry.registerPath({
   }
 });
 
-const EventDetailSchema = Event.extend({ ticketTypes: z.array(TicketTypeSummarySchema) });
-const EventSuccess = registry.register("EventSuccess", jsendSuccess(z.object({ event: EventDetailSchema })));
-
 registry.registerPath({
   method: "get",
   path: "/events/{eventId}",
@@ -65,11 +52,6 @@ registry.registerPath({
     500: jsonResponse("Internal server error", ServerErrorResponse),
   },
 });
-
-
-const CreateEventRequest = registry.register("CreateEventRequest", CreateEventSchema);
-const NewEvent = registry.register("NewEvent", Event.omit({ updatedAt: true }));
-const EventCreatedSuccess = registry.register("EventCreatedSuccess", jsendSuccess(z.object({ event: NewEvent })));
 
 registry.registerPath({
   method: "post",
@@ -92,8 +74,6 @@ registry.registerPath({
     500: jsonResponse("Internal server error", ServerErrorResponse),
   },
 });
-
-const UpdateEventRequest = registry.register("UpdateEventRequest", PatchEventSchema);
 
 registry.registerPath({
   method: "patch",
@@ -142,9 +122,6 @@ registry.registerPath({
   }
 });
 
-const PostTicketTypeRequest = registry.register("PostTicketTypeRequest", CreateTicketTypeSchema);
-const TicketTypeSuccess = registry.register("TicketTypeSuccess", TicketTypeSummarySchema);
-
 registry.registerPath({
   method: "post",
   path: "/events/{eventId}/ticket-types",
@@ -169,8 +146,6 @@ registry.registerPath({
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
 });
-
-const PatchTicketTypeRequest = registry.register("PatchTicketTypeRequest", PatchTicketTypeSchema);
 
 registry.registerPath({
   method: "patch",
@@ -216,9 +191,6 @@ registry.registerPath({
     500: jsonResponse("Internal server error", ServerErrorResponse),
   },
 });
-
-const EventBookingListItem = registry.register("EventBookingListItem", EventBookingListItemSchema);
-const EventBookingsSuccess = registry.register("EventBookingsSuccess", jsendSuccess(z.object({ bookings: z.array(EventBookingListItem) })));
 
 registry.registerPath({
   method: "get",

@@ -1,13 +1,8 @@
 import { z } from "zod";
 import { bearerAuth, registry } from "./registry";
 import { jsonResponse } from "./helpers";
-import { jsendSuccess } from "../schemas/jsend.schema";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
-import { bookingIdParamSchema, BookingListItemSchema, BookingTicketsDetailSchema, CreateBookingSchema, UserBookingDetailSchema, UserBookingListItemSchema } from "../schemas/booking.schema";
-import { EventIdParamSchema } from "./event.docs";
-
-const BookingListItem = registry.register("BookingListItem", BookingListItemSchema);
-const AllBookingsSuccess = registry.register("AllBookingsSuccess", jsendSuccess(z.object({ bookings: z.array(BookingListItem) })));
+import { AllBookingsSuccess, BookingIdParamSchema, BookingTicketsDetailSuccess, CreateBookingRequest, EventIdParamSchema, UserBookingDetailSuccess, UserBookingsSuccess } from "./components";
 
 registry.registerPath({
   method: "get",
@@ -26,9 +21,6 @@ registry.registerPath({
   }
 });
 
-const UserBookingListItem = registry.register("UserBookingListItem", UserBookingListItemSchema);
-const UserBookingsSuccess = registry.register("UserBookingsSuccess", jsendSuccess(z.object({ bookings: z.array(UserBookingListItem) })));
-
 registry.registerPath({
   method: "get",
   path: "/bookings/mine",
@@ -42,10 +34,6 @@ registry.registerPath({
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
 });
-
-const UserBookingDetail = registry.register("UserBookingDetail", UserBookingDetailSchema);
-const UserBookingDetailSuccess = registry.register("UserBookingDetailSuccess", jsendSuccess(z.object({ booking: UserBookingDetail })));
-const BookingIdParamSchema = registry.register("BookingIdParamSchema", bookingIdParamSchema);
 
 registry.registerPath({
   method: "get",
@@ -64,9 +52,6 @@ registry.registerPath({
   }
 });
 
-const BookingTicketsDetail = registry.register("BookingTicketsDetail", BookingTicketsDetailSchema);
-const BookingTicketsDetailSuccess = registry.register("BookingTicketsDetailSuccess", jsendSuccess(z.object({ tickets: z.array(BookingTicketsDetail) })));
-
 registry.registerPath({
   method: "get",
   path: "/bookings/{bookingId}/tickets",
@@ -83,9 +68,6 @@ registry.registerPath({
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
 });
-
-
-const CreateBookingRequest = registry.register("CreateBookingRequest", CreateBookingSchema);
 
 registry.registerPath({
   method: "post",
