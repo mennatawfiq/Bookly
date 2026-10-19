@@ -1,6 +1,6 @@
-import "./zod-extend";
-import "./auth.docs";
-import "./jsend.docs";
+import "./zod-extend"
+import "./auth.docs"
+import "./jsend.docs"
 import "./event.docs"
 import "./booking.docs"
 

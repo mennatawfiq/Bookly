@@ -8,7 +8,7 @@ import { CreateTicketTypeSchema, PatchTicketTypeSchema, TicketTypeIdParamSchema,
 import { EventBookingListItemSchema } from "../schemas/booking.schema";
 
 const Event = registry.register("Event", EventSchema);
-const EventIdParamSchema = registry.register("EventIdParamSchema", eventIdParamSchema);
+export const EventIdParamSchema = registry.register("EventIdParamSchema", eventIdParamSchema);
 
 const AllEvent = registry.register("AllEvent", Event.omit({ status: true, createdAt: true, updatedAt: true }));
 const AllEventsSuccess = registry.register("AllEventsSuccess", jsendSuccess(z.object({ events: z.array(AllEvent) })));

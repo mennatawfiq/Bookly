@@ -3,7 +3,8 @@ import { bearerAuth, registry } from "./registry";
 import { jsonResponse } from "./helpers";
 import { jsendSuccess } from "../schemas/jsend.schema";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
-import { bookingIdParamSchema, BookingListItemSchema, BookingTicketsDetailSchema, UserBookingDetailSchema, UserBookingListItemSchema } from "../schemas/booking.schema";
+import { bookingIdParamSchema, BookingListItemSchema, BookingTicketsDetailSchema, CreateBookingSchema, UserBookingDetailSchema, UserBookingListItemSchema } from "../schemas/booking.schema";
+import { EventIdParamSchema } from "./event.docs";
 
 const BookingListItem = registry.register("BookingListItem", BookingListItemSchema);
 const AllBookingsSuccess = registry.register("AllBookingsSuccess", jsendSuccess(z.object({ bookings: z.array(BookingListItem) })));
@@ -79,6 +80,33 @@ registry.registerPath({
     400: jsonResponse("Invalid bookingId", ValidationFailResponse),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     404: jsonResponse("Booking not found or you are not allowed to see it", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  }
+});
+
+
+const CreateBookingRequest = registry.register("CreateBookingRequest", CreateBookingSchema);
+
+registry.registerPath({
+  method: "post",
+  path: "/events/{eventId}/bookings",
+  tags: ["Bookings"],
+  summary: "Create a booking of an event",
+  description: "Creates a booking for a published event that has not started yet. The body lists one or more ticket types with a count for each. A ticket type can appear only once in the list, and the total number of tickets can't exceed 10. A user can have only one `CONFIRMED` booking per event. Each ticket gets its own QR code, which you can read from `GET /bookings/{bookingId}/tickets`. Requires authentication.",
+  security: [{ [bearerAuth.name]: [] }],
+  request: {
+    params: EventIdParamSchema,
+    body: {
+      required: true,
+      content: { "application/json": { schema: CreateBookingRequest } }
+    }
+  },
+  responses: {
+    201: jsonResponse("The created booking", UserBookingDetailSuccess),
+    400: jsonResponse("Validation failed, or the event doesn't have one of the requested ticket types", z.union([ValidationFailResponse, MessageFailResponse])),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    404: jsonResponse("Event not found", MessageFailResponse),
+    409: jsonResponse("Not a published event or event has already started or the user already have a `CONFIRMED` booking for this event or a requested type doesn't have enough remaining tickets", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
 });

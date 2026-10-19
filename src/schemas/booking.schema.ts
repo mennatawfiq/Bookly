@@ -84,3 +84,23 @@ export const EventBookingListItemSchema = UserBookingListItemSchema
       email: z.email().meta({ example: "jane@example.com" }),
     })
   });
+
+export const CreateBookingSchema = z.object({
+  tickets: z.array(
+    z.object({
+      type: z.enum(TicketTypeKind).meta({ example: "GENERAL" }),
+      count: z.int().min(1).max(10).meta({ example: 2 }),
+    })
+  )
+    .min(1)
+    .refine(
+      (items) => new Set(items.map((i) => i.type)).size === items.length,
+      { message: "Each ticket type can appear only once" }
+    )
+    .refine(
+      (tickets) => tickets.reduce((total, ticket) => total + ticket.count, 0) <= 10,
+      { message: "You can book at most 10 tickets per booking", }
+    )
+});
+
+export type CreateBookingInput = z.infer<typeof CreateBookingSchema>;
