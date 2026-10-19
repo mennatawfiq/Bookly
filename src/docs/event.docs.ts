@@ -5,9 +5,10 @@ import { jsendSuccess } from "../schemas/jsend.schema";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
 import { CreateEventSchema, eventIdParamSchema, EventSchema, PatchEventSchema } from "../schemas/event.schema";
 import { CreateTicketTypeSchema, PatchTicketTypeSchema, TicketTypeIdParamSchema, TicketTypeSummarySchema } from "../schemas/ticketType.schema";
+import { EventBookingListItemSchema } from "../schemas/booking.schema";
 
 const Event = registry.register("Event", EventSchema);
-const EventIdParamSchema = registry.register("EventIdParamSchema", eventIdParamSchema);
+export const EventIdParamSchema = registry.register("EventIdParamSchema", eventIdParamSchema);
 
 const AllEvent = registry.register("AllEvent", Event.omit({ status: true, createdAt: true, updatedAt: true }));
 const AllEventsSuccess = registry.register("AllEventsSuccess", jsendSuccess(z.object({ events: z.array(AllEvent) })));
@@ -107,6 +108,7 @@ registry.registerPath({
       content: { "application/json": { schema: UpdateEventRequest } }
     }
   },
+  security: [{ [bearerAuth.name]: [] }],
   responses: {
     200: jsonResponse("The updated event", EventCreatedSuccess),
     400: jsonResponse(
@@ -158,7 +160,7 @@ registry.registerPath({
     }
   },
   responses: {
-    200: jsonResponse("The new ticket type", TicketTypeSuccess), // TODO: fix 201 not 200
+    201: jsonResponse("The new ticket type", TicketTypeSuccess),
     400: jsonResponse("Validation failed", ValidationFailResponse),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     403: jsonResponse("Not an ORGANIZER or ADMIN", MessageFailResponse),
@@ -197,20 +199,41 @@ registry.registerPath({
 
 registry.registerPath({
   method: "delete",
-  path: "/events/{eventId}",
+  path: "/events/{eventId}/ticket-types/{ticketTypeId}",
   tags: ["Events"],
-  summary: "Delete an event",
+  summary: "Delete a ticket type of an event",
   description:
-    "Deletes a cancelled event owned by the authenticated user. Requires the ORGANIZER or ADMIN role.",
+    "Deletes a ticket type of an event you own (admins can delete from any event). A ticket type cannot be deleted if any ticket was ever issued for it, even a cancelled one, if the event is cancelled, or if it is the only ticket type of a published event. Draft events can have zero ticket types. Requires the ORGANIZER or ADMIN role.",
   security: [{ [bearerAuth.name]: [] }],
-  request: { params: EventIdParamSchema },
+  request: { params: TicketTypeIdParamSchema },
   responses: {
-    204: { description: "Event deleted successfully" },
+    204: { description: "Ticket Type deleted successfully" },
     400: jsonResponse("Validation failed", ValidationFailResponse),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     403: jsonResponse("Not an ORGANIZER or ADMIN", MessageFailResponse),
-    404: jsonResponse("Event not found, or it isn't yours", MessageFailResponse),
-    409: jsonResponse("Only cancelled events can be deleted", MessageFailResponse),
+    404: jsonResponse("Event not found, ticket type not found, or it isn't yours", MessageFailResponse),
+    409: jsonResponse("Cancelled events cannot be modified, published events must have at least one ticket type, or ticket type has booked tickets", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   },
+});
+
+const EventBookingListItem = registry.register("EventBookingListItem", EventBookingListItemSchema);
+const EventBookingsSuccess = registry.register("EventBookingsSuccess", jsendSuccess(z.object({ bookings: z.array(EventBookingListItem) })));
+
+registry.registerPath({
+  method: "get",
+  path: "/events/{eventId}/bookings",
+  tags: ["Events"],
+  summary: "List bookings of an event",
+  description: "Returns all bookings of an event, newest first, including cancelled ones. Each booking includes the name of the user who booked, its status, and ticket counts. `activeTicketsCount` is the number of tickets that are not cancelled (valid or used). `cancelledTicketsCount` is the number of cancelled tickets. Allowed for the event’s organizer and for admins. Requires the `ORGANIZER` or `ADMIN` role.",
+  security: [{ [bearerAuth.name]: [] }],
+  request: { params: EventIdParamSchema },
+  responses: {
+    200: jsonResponse("List of the event’s bookings", EventBookingsSuccess),
+    400: jsonResponse("Validation failed", ValidationFailResponse),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    403: jsonResponse("Not an ORGANIZER or ADMIN", MessageFailResponse),
+    404: jsonResponse("Event not found or it isn't yours", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  }
 });

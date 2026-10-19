@@ -2,10 +2,11 @@ import Router from "express";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { authenticate, authorize, optionalAuthenticate, requireOwnership } from "../middlewares/auth";
 import prisma from "../lib/prisma";
-import { deleteEvent, getEvent, getEvents, getMyEvents, patchEvent, patchTicketType, postEvent, postTicketType, publishEvent } from "../controllers/event.controllers";
+import { deleteTicketType, getEvent, getEventBookings, getEvents, getMyEvents, patchEvent, patchTicketType, postBooking, postEvent, postTicketType, publishEvent } from "../controllers/event.controllers";
 import { validate } from "../middlewares/validate";
 import { eventIdParamSchema, CreateEventSchema, PatchEventSchema } from "../schemas/event.schema";
 import { CreateTicketTypeSchema, PatchTicketTypeSchema, TicketTypeIdParamSchema } from "../schemas/ticketType.schema";
+import { CreateBookingSchema } from "../schemas/booking.schema";
 
 const router = Router();
 
@@ -45,14 +46,18 @@ router.patch("/:eventId/ticket-types/:ticketTypeId", authenticate, authorize('AD
   asyncHandler(patchTicketType)
 );
 
-router.post("/", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(eventIdParamSchema, "params"), asyncHandler(deleteEvent)); // TODO: fix this!!! method: delete, requireOwnership on resource
+router.delete("/:eventId/ticket-types/:ticketTypeId", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(TicketTypeIdParamSchema, "params"),
+  requireOwnership({ model: prisma.event, paramName: "eventId", ownerField: "organizerId", resourceName: "Event" }),
+  asyncHandler(deleteTicketType)
+);
+
+router.get("/:eventId/bookings", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(eventIdParamSchema, "params"),
+  requireOwnership({ model: prisma.event, paramName: "eventId", ownerField: "organizerId", resourceName: "Event" }),
+  asyncHandler(getEventBookings)
+);
+
+router.post("/:eventId/bookings", authenticate, validate(eventIdParamSchema, "params"), validate(CreateBookingSchema), asyncHandler(postBooking));
 
 export default router;
 
-// GET /events/:eventId/bookings // list event bookings, allowed for organizers and admins
-
-// POST /events/:eventId/bookings // create a booking, by the user
-
 // POST /events/:eventId/check-ins // send ticket QR code in the body
-
-// DELETE /events/:eventId/ticket-types/:ticketTypeId // delete only if there's no booked tickets

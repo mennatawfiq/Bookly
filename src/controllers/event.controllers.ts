@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
-import { getEventsService, getEventService, getMyEventsService, postEventService, patchEventService, publishEventService, postTicketTypeService, patchTicketTypeService, deleteEventService } from "../services/event.services";
+import { getEventsService, getEventService, getMyEventsService, postEventService, patchEventService, publishEventService, postTicketTypeService, patchTicketTypeService, deleteTicketTypeService, getEventBookingsService } from "../services/event.services";
 import { AppError } from "../errorhandling/appError";
+import { postBookingService } from "../services/booking.services";
 
 export const getEvents = async (req: Request, res: Response) => {
 
@@ -133,7 +134,25 @@ export const patchTicketType = async (req: Request, res: Response) => {
 
 };
 
-export const deleteEvent = async (req: Request, res: Response) => {
+export const deleteTicketType = async (req: Request, res: Response) => {
+
+  const { eventId, ticketTypeId } = req.params;
+
+  if (typeof eventId !== "string") {
+    throw new AppError(400, "Invalid eventId");
+  }
+
+  if (typeof ticketTypeId !== "string") {
+    throw new AppError(400, "Invalid ticketTypeId");
+  }
+
+  await deleteTicketTypeService(eventId, ticketTypeId);
+
+  res.jsend.success(null, 204);
+
+};
+
+export const getEventBookings = async (req: Request, res: Response) => {
 
   const { eventId } = req.params;
 
@@ -141,8 +160,30 @@ export const deleteEvent = async (req: Request, res: Response) => {
     throw new AppError(400, "Invalid eventId");
   }
 
-  await deleteEventService(eventId);
+  const bookings = await getEventBookingsService(eventId);
 
-  res.jsend.success(null, 204);
+  res.jsend.success({ bookings }, 200);
+
+};
+
+export const postBooking = async (req: Request, res: Response) => {
+
+  const userId = req.user?.id;
+
+  if (typeof userId !== "string") {
+    throw new AppError(400, "Invalid userId");
+  }
+
+  const { eventId } = req.params;
+
+  if (typeof eventId !== "string") {
+    throw new AppError(400, "Invalid eventId");
+  }
+
+  const bookingInfo = req.body;
+
+  const booking = await postBookingService(userId, eventId, bookingInfo);
+
+  res.jsend.success({ booking }, 201);
 
 };
