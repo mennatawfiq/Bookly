@@ -92,3 +92,21 @@ registry.registerPath({
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
 });
+
+registry.registerPath({
+  method: "post",
+  path: "/bookings/{bookingId}/cancel",
+  tags: ["Bookings"],
+  summary: "Cancel a booking",
+  description: "Cancels a `CONFIRMED` booking of a `PUBLISHED` event. Allowed for the user who made the booking and for admins. This action is valid as long as the event has not yet started. This returns tickets count to stock. Requires authentication.",
+  security: [{ [bearerAuth.name]: [] }],
+  request: { params: BookingIdParamSchema },
+  responses: {
+    204: { description: "Booking cancelled successfully" },
+    400: jsonResponse("Invalid bookingId", ValidationFailResponse),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    404: jsonResponse("Booking not found or you are not allowed to see it", MessageFailResponse),
+    409: jsonResponse("Booking or event is already cancelled, or the event has started", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  }
+});

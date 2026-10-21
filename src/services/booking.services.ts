@@ -1,5 +1,6 @@
+import tr from "zod/v4/locales/tr.js";
 import { Prisma } from "../../prisma/generated/client";
-import { EventStatus, TicketTypeKind } from "../../prisma/generated/enums";
+import { BookingStatus, EventStatus, TicketTypeKind } from "../../prisma/generated/enums";
 import { AppError } from "../errorhandling/appError";
 import prisma from "../lib/prisma";
 import { CreateBookingInput } from "../schemas/booking.schema";
@@ -179,5 +180,99 @@ export async function postBookingService(userId: string, eventId: string, bookin
 
   // return booking with tickets info
   return await getBookingService(bookingId);
+
+};
+
+export async function cancelBookingService(bookingId: string) {
+
+  // early fetch to get eventId to lock the event row
+  const booking = await prisma.booking.findUnique({ where: { id: bookingId }, select: { eventId: true } });
+
+  if (!booking) {
+    throw new AppError(404, "Booking not found");
+  }
+
+  return await prisma.$transaction(
+    async (tx) => {
+
+      // share lock so bookings run together, but wait for publish, patch, and delete
+      const eventRows = await tx.$queryRaw<{ id: string; status: EventStatus, startsAt: Date }[]>
+        `SELECT id, status, "startsAt" FROM "Event" WHERE id = ${booking.eventId} FOR SHARE`;
+
+      const event = eventRows[0];
+
+      if (!event) {
+        throw new AppError(404, "Event not found");
+      }
+
+      // BR: an event must be published and not yet started
+      if (event.status !== "PUBLISHED") {
+        throw new AppError(409, "Event is not published");
+      }
+
+      if (event.startsAt <= new Date()) {
+        throw new AppError(409, "Event already started");
+      }
+
+      const bookingRows = await tx.$queryRaw<{ id: string; status: BookingStatus }[]>
+        `SELECT id, status FROM "Booking" WHERE id = ${bookingId} FOR UPDATE`;
+
+      if (!bookingRows[0]) {
+        throw new AppError(404, "Booking not found");
+      }
+
+      if (bookingRows[0].status === "CANCELLED") {
+        throw new AppError(409, "Booking is already cancelled");
+      }
+
+      const ticketRows = await tx.$queryRaw<{ id: string; ticketTypeId: string }[]>
+        `SELECT id, "ticketTypeId" FROM "Ticket" WHERE "bookingId" = ${bookingId} AND status = 'VALID'
+      ORDER BY id FOR UPDATE`;
+
+      const cancelledAt = new Date();
+
+      if (ticketRows.length === 0) {
+        await tx.booking.update({
+          where: { id: bookingId },
+          data: { status: "CANCELLED", cancelledAt }
+        });
+        return;
+      }
+
+      const ticketTypeIds = [...new Set(ticketRows.map((t) => t.ticketTypeId))];
+
+      await tx.$queryRaw`SELECT id FROM "TicketType" WHERE id IN (${Prisma.join(ticketTypeIds)}) AND 
+      "eventId" = ${booking.eventId} ORDER BY id FOR UPDATE`;
+
+      const ticketIds = ticketRows.map((t) => t.id);
+
+      await tx.ticket.updateMany({
+        where: { id: { in: ticketIds } },
+        data: { status: "CANCELLED", cancelledAt, }
+      });
+
+      const countByType = new Map<string, number>();
+
+      for (const t of ticketRows) {
+        const typeId = t.ticketTypeId;
+        countByType.set(typeId, (countByType.get(typeId) ?? 0) + 1);
+      }
+
+      // sort tickets by id to loop on it in one order
+      const sortedCounts = [...countByType].sort(([a], [b]) => a.localeCompare(b));
+
+      for (const [id, count] of sortedCounts) {
+        await tx.ticketType.update({
+          where: { id, eventId: booking.eventId },
+          data: { remaining: { increment: count } }
+        });
+      }
+
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: { status: "CANCELLED", cancelledAt }
+      });
+
+    });
 
 };
