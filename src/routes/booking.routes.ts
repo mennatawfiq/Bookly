@@ -1,9 +1,9 @@
 import Router from "express";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { authenticate, authorize, requireOwnership } from "../middlewares/auth";
-import { cancelBooking, getAllBookings, getBooking, getMyBookings, getTickets } from "../controllers/booking.controllers";
+import { cancelBooking, cancelTicket, getAllBookings, getBooking, getMyBookings, getTickets } from "../controllers/booking.controllers";
 import prisma from "../lib/prisma";
-import { bookingIdParamSchema } from "../schemas/booking.schema";
+import { bookingIdParamSchema, CancelTicketParamSchema } from "../schemas/booking.schema";
 import { validate } from "../middlewares/validate";
 import { isEventOrganizer } from "../helpers/auth.helpers";
 
@@ -23,6 +23,10 @@ router.get("/:bookingId/tickets", authenticate, validate(bookingIdParamSchema, "
 router.post("/:bookingId/cancel", authenticate, validate(bookingIdParamSchema, "params"),
   requireOwnership({ model: prisma.booking, paramName: "bookingId", ownerField: "userId", resourceName: "Booking" }),
   asyncHandler(cancelBooking));
+
+router.post("/:bookingId/tickets/:ticketId/cancel", authenticate, validate(CancelTicketParamSchema, "params"),
+  requireOwnership({ model: prisma.booking, paramName: "bookingId", ownerField: "userId", resourceName: "Booking" }),
+  asyncHandler(cancelTicket));
 
 export default router;
 

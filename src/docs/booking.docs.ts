@@ -3,6 +3,7 @@ import { bearerAuth, registry } from "./registry";
 import { jsonResponse } from "./helpers";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
 import { AllBookingsSuccess, BookingIdParamSchema, BookingTicketsDetailSuccess, CreateBookingRequest, EventIdParamSchema, UserBookingDetailSuccess, UserBookingsSuccess } from "./components";
+import { CancelTicketParamSchema } from "../schemas/booking.schema";
 
 registry.registerPath({
   method: "get",
@@ -98,7 +99,7 @@ registry.registerPath({
   path: "/bookings/{bookingId}/cancel",
   tags: ["Bookings"],
   summary: "Cancel a booking",
-  description: "Cancels a `CONFIRMED` booking of a `PUBLISHED` event. Allowed for the user who made the booking and for admins. This action is valid as long as the event has not yet started. This returns tickets count to stock. Requires authentication.",
+  description: "Cancels a `CONFIRMED` booking of a `PUBLISHED` event. Allowed for the user who made the booking and for admins. This action is valid as long as the event has not yet started. Requires authentication.",
   security: [{ [bearerAuth.name]: [] }],
   request: { params: BookingIdParamSchema },
   responses: {
@@ -107,6 +108,24 @@ registry.registerPath({
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     404: jsonResponse("Booking not found or you are not allowed to see it", MessageFailResponse),
     409: jsonResponse("Booking or event is already cancelled, or the event has started", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  }
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/bookings/{bookingId}/tickets/{ticketId}/cancel",
+  tags: ["Bookings"],
+  summary: "Cancel a ticket",
+  description: "Cancels a `VALID` ticket of a `CONFIRMED` booking of a `PUBLISHED` event, and if it is the last ticket of a booking, the booking will be cancelled. Allowed for the user who made the booking and for admins. This action is valid as long as the event has not yet started. Requires authentication.",
+  security: [{ [bearerAuth.name]: [] }],
+  request: { params: CancelTicketParamSchema },
+  responses: {
+    204: { description: "Ticket cancelled successfully" },
+    400: jsonResponse("Invalid bookingId or ticketId", ValidationFailResponse),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    404: jsonResponse("Booking or ticket not found or you are not allowed to see it", MessageFailResponse),
+    409: jsonResponse("Booking or event or ticket is already cancelled, or the event has started", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
 });
