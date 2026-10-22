@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { registry } from "./registry";
 import { jsendSuccess } from "../schemas/jsend.schema";
-import { bookingIdParamSchema, BookingListItemSchema, BookingTicketsDetailSchema, CreateBookingSchema, EventBookingListItemSchema, UserBookingDetailSchema, UserBookingListItemSchema } from "../schemas/booking.schema";
+import { bookingIdParamSchema, BookingListItemSchema, BookingTicketsDetailSchema, CreateBookingSchema, EventBookingListItemSchema, PatchTicketCountSchema, UserBookingDetailSchema, UserBookingListItemSchema } from "../schemas/booking.schema";
 import { CreateEventSchema, eventIdParamSchema, EventSchema, PatchEventSchema } from "../schemas/event.schema";
 import { CreateTicketTypeSchema, PatchTicketTypeSchema, TicketTypeSummarySchema } from "../schemas/ticketType.schema";
 
@@ -50,3 +50,4 @@ export const BookingTicketsDetail = registry.register("BookingTicketsDetail", Bo
 export const BookingTicketsDetailSuccess = registry.register("BookingTicketsDetailSuccess", jsendSuccess(z.object({ tickets: z.array(BookingTicketsDetail) })));
 
 export const CreateBookingRequest = registry.register("CreateBookingRequest", CreateBookingSchema);
+export const PatchTicketCountRequest = registry.register("PatchTicketCountRequest", PatchTicketCountSchema);

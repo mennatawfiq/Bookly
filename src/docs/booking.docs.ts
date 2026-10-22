@@ -2,7 +2,8 @@ import { z } from "zod";
 import { bearerAuth, registry } from "./registry";
 import { jsonResponse } from "./helpers";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
-import { AllBookingsSuccess, BookingIdParamSchema, BookingTicketsDetailSuccess, CreateBookingRequest, EventIdParamSchema, UserBookingDetailSuccess, UserBookingsSuccess } from "./components";
+import { AllBookingsSuccess, BookingIdParamSchema, BookingTicketsDetailSuccess, CreateBookingRequest, EventIdParamSchema, PatchTicketCountRequest, UserBookingDetailSuccess, UserBookingsSuccess } from "./components";
+import { CancelTicketParamSchema } from "../schemas/booking.schema";
 
 registry.registerPath({
   method: "get",
@@ -89,6 +90,66 @@ registry.registerPath({
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     404: jsonResponse("Event not found", MessageFailResponse),
     409: jsonResponse("Not a published event or event has already started or the user already have a `CONFIRMED` booking for this event or a requested type doesn't have enough remaining tickets", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  }
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/bookings/{bookingId}/cancel",
+  tags: ["Bookings"],
+  summary: "Cancel a booking",
+  description: "Cancels a `CONFIRMED` booking of a `PUBLISHED` event. Allowed for the user who made the booking and for admins. This action is valid as long as the event has not yet started. Requires authentication.",
+  security: [{ [bearerAuth.name]: [] }],
+  request: { params: BookingIdParamSchema },
+  responses: {
+    204: { description: "Booking cancelled successfully" },
+    400: jsonResponse("Invalid bookingId", ValidationFailResponse),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    404: jsonResponse("Booking not found or you are not allowed to see it", MessageFailResponse),
+    409: jsonResponse("Booking or event is already cancelled, or the event has started", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  }
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/bookings/{bookingId}/tickets/{ticketId}/cancel",
+  tags: ["Bookings"],
+  summary: "Cancel a ticket",
+  description: "Cancels a `VALID` ticket of a `CONFIRMED` booking of a `PUBLISHED` event, and if it is the last ticket of a booking, the booking will be cancelled. Allowed for the user who made the booking and for admins. This action is valid as long as the event has not yet started. Requires authentication.",
+  security: [{ [bearerAuth.name]: [] }],
+  request: { params: CancelTicketParamSchema },
+  responses: {
+    204: { description: "Ticket cancelled successfully" },
+    400: jsonResponse("Invalid bookingId or ticketId", ValidationFailResponse),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    404: jsonResponse("Booking or ticket not found or you are not allowed to see it", MessageFailResponse),
+    409: jsonResponse("Booking or event or ticket is already cancelled, or the event has started", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  }
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/bookings/{bookingId}/tickets",
+  tags: ["Bookings"],
+  summary: "Increase ticket counts of a booking",
+  description: "Increases the number of tickets in a `CONFIRMED` booking of a `PUBLISHED` event that has not started. For each ticket type in the body, `count` is the new total number of active tickets of that type in the booking. A lower total is rejected with `409`: use the cancel-ticket endpoint to reduce tickets. A booking can hold at most 10 tickets in total. A ticket type can appear only once. New tickets get their own QR codes. Allowed for the user who made the booking and for admins. Requires authentication.",
+  security: [{ [bearerAuth.name]: [] }],
+  request: {
+    params: BookingIdParamSchema,
+    body: {
+      required: true,
+      content: { "application/json": { schema: PatchTicketCountRequest } }
+    }
+  },
+  responses: {
+    200: jsonResponse("The updated booking", UserBookingDetailSuccess),
+    400: jsonResponse("Validation failed, the event doesn't have one of the requested ticket types, or the booking would exceed 10 tickets", z.union([ValidationFailResponse, MessageFailResponse])),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    404: jsonResponse("Booking not found, or you are not allowed to see it", MessageFailResponse),
+    409: jsonResponse("the event is not published or has already started, the booking is already cancelled, a requested total is lower than the tickets already held (use cancel-ticket), a requested type doesn’t have enough remaining tickets", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
 });

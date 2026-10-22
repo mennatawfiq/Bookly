@@ -28,7 +28,7 @@ export type CreateTicketTypeInput = z.infer<typeof CreateTicketTypeSchema>;
 
 export const TicketTypeIdParamSchema = eventIdParamSchema.extend({
   ticketTypeId: z.uuid().meta({
-    description: "The unique identifier of the event",
+    description: "The unique identifier of the ticket type",
     example: "679e8400-e29b-41d4-a716-446655440000",
   })
 });

@@ -104,3 +104,17 @@ export const CreateBookingSchema = z.object({
 });
 
 export type CreateBookingInput = z.infer<typeof CreateBookingSchema>;
+
+export const CancelTicketParamSchema = bookingIdParamSchema.extend({
+  ticketId: z.uuid().meta({
+    description: "The unique identifier of the ticket",
+    example: "618ece97-1e70-4e70-a8aa-ef484b6347b4",
+  })
+});
+
+// I chose to send count itself and not the delta to ensure idempotency
+export const PatchTicketCountSchema = z.object({
+  tickets: CreateBookingSchema.shape.tickets
+});
+
+export type PatchTicketCountInput = z.infer<typeof PatchTicketCountSchema>;
