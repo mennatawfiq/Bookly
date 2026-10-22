@@ -111,3 +111,10 @@ export const CancelTicketParamSchema = bookingIdParamSchema.extend({
     example: "618ece97-1e70-4e70-a8aa-ef484b6347b4",
   })
 });
+
+// I chose to send count itself and not the delta to ensure idempotency
+export const PatchTicketCountSchema = z.object({
+  tickets: CreateBookingSchema.shape.tickets
+});
+
+export type PatchTicketCountInput = z.infer<typeof PatchTicketCountSchema>;

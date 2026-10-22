@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { cancelBookingService, cancelTicketService, getAllBookingsService, getBookingService, getMyBookingsService } from "../services/booking.services";
+import { cancelBookingService, cancelTicketService, getAllBookingsService, getBookingService, getMyBookingsService, patchTicketCountService } from "../services/booking.services";
 import { AppError } from "../errorhandling/appError";
 import { getTicketsService } from "../services/ticket.services";
 
@@ -82,5 +82,21 @@ export const cancelTicket = async (req: Request, res: Response) => {
   await cancelTicketService(bookingId, ticketId);
 
   res.status(204).send();
+
+};
+
+export const patchTicketCount = async (req: Request, res: Response) => {
+
+  const { bookingId } = req.params;
+
+  if (typeof bookingId !== "string") {
+    throw new AppError(400, "Invalid bookingId");
+  }
+
+  const ticketCountInfo = req.body;
+
+  const booking = await patchTicketCountService(bookingId, ticketCountInfo);
+
+  res.jsend.success({ booking }, 200);
 
 };
