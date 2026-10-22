@@ -1,4 +1,5 @@
-import { EventStatus, TicketTypeKind } from "../../prisma/generated/enums";
+import { Prisma } from "../../prisma/generated/client";
+import { BookingStatus, EventStatus, TicketTypeKind } from "../../prisma/generated/enums";
 import { AppError } from "../errorhandling/appError";
 import prisma from "../lib/prisma";
 import { CreateEventInput, PatchEventInput } from "../schemas/event.schema";
@@ -192,32 +193,59 @@ export async function publishEventService(eventId: string) {
 
 };
 
-// export async function cancelEventService(eventId: string) { // to be completed after implementing booking routes as we'll need cancel bookings here
+export async function cancelEventService(eventId: string) {
 
-//   const existingEvent = await prisma.event.findUnique({
-//     where: { id: eventId }
-//   });
+  await prisma.$transaction(
+    async (tx) => {
+      const eventRows = await tx.$queryRaw<{ id: string; status: EventStatus; startsAt: Date }[]>
+        `SELECT id, status, "startsAt" FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
 
-//   if (!existingEvent) {
-//     throw new AppError(404, "Event not found");
-//   }
+      const event = eventRows[0];
 
-//   if (existingEvent.status === "CANCELLED") {
-//     throw new AppError(409, "Can't cancel a cancelled event");
-//   }
+      if (!event) {
+        throw new AppError(404, "Event not found");
+      }
 
+      if (event.status === "CANCELLED") {
+        throw new AppError(409, "Cancelled events cannot be modified");
+      }
 
-//   const updatedEvent = await prisma.event.update({
-//     where: { id: eventId },
-//     data: {
-//       status: "CANCELLED"
-//     },
-//     select: eventSummarySelect
-//   });
+      if (event.startsAt <= new Date()) {
+        throw new AppError(409, "Event already started");
+      }
 
-//   return updatedEvent;
+      const bookingRows = await tx.$queryRaw<{ id: string }[]>
+        `SELECT id FROM "Booking" WHERE "eventId" = ${eventId} AND status = 'CONFIRMED' FOR UPDATE`;
 
-// };
+      const bookingIds = bookingRows.map((b) => b.id);
+
+      if (bookingIds.length === 0) {
+        return;
+      }
+
+      await tx.$queryRaw`SELECT id FROM "Ticket" WHERE "bookingId" IN (${Prisma.join(bookingIds)}) AND status = 'VALID'
+            ORDER BY id FOR UPDATE`;
+
+      const cancelledAt = new Date();
+
+      await tx.ticket.updateMany({
+        where: { bookingId: { in: bookingIds }, status: "VALID" },
+        data: { status: "CANCELLED", cancelledAt, }
+      });
+
+      await tx.booking.updateMany({
+        where: { eventId, status: "CONFIRMED" },
+        data: { status: "CANCELLED", cancelledAt }
+      });
+
+      await tx.event.update({
+        where: { id: eventId },
+        data: { status: "CANCELLED" }
+      });
+    }
+  );
+
+};
 
 export async function postTicketTypeService(eventId: string, ticketTypeInfo: CreateTicketTypeInput) {
 

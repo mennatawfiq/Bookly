@@ -2,7 +2,7 @@ import Router from "express";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { authenticate, authorize, optionalAuthenticate, requireOwnership } from "../middlewares/auth";
 import prisma from "../lib/prisma";
-import { deleteTicketType, getEvent, getEventBookings, getEvents, getMyEvents, patchEvent, patchTicketType, postBooking, postEvent, postTicketType, publishEvent } from "../controllers/event.controllers";
+import { cancelEvent, deleteTicketType, getEvent, getEventBookings, getEvents, getMyEvents, patchEvent, patchTicketType, postBooking, postEvent, postTicketType, publishEvent } from "../controllers/event.controllers";
 import { validate } from "../middlewares/validate";
 import { eventIdParamSchema, CreateEventSchema, PatchEventSchema } from "../schemas/event.schema";
 import { CreateTicketTypeSchema, PatchTicketTypeSchema, TicketTypeIdParamSchema } from "../schemas/ticketType.schema";
@@ -28,13 +28,10 @@ router.post("/:eventId/publish", authenticate, authorize('ADMIN', 'ORGANIZER'), 
   asyncHandler(publishEvent)
 );
 
-// router.post("/:eventId/cancel", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(eventIdParamSchema, "params"),
-//   requireOwnership({ model: prisma.event, paramName: "eventId", ownerField: "organizerId", resourceName: "Event" }),
-//   asyncHandler(cancelEvent)
-// );
-
-
-// POST   /events/:id/cancel
+router.post("/:eventId/cancel", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(eventIdParamSchema, "params"),
+  requireOwnership({ model: prisma.event, paramName: "eventId", ownerField: "organizerId", resourceName: "Event" }),
+  asyncHandler(cancelEvent)
+);
 
 router.post("/:eventId/ticket-types", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(eventIdParamSchema, "params"), validate(CreateTicketTypeSchema),
   requireOwnership({ model: prisma.event, paramName: "eventId", ownerField: "organizerId", resourceName: "Event" }),

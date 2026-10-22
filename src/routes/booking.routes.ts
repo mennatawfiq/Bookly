@@ -34,4 +34,3 @@ router.patch("/:bookingId/tickets", authenticate, validate(bookingIdParamSchema,
 
 export default router;
 
-// POST /bookings/:bookingId/tickets // increase number of tickets

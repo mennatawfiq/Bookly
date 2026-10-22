@@ -4,6 +4,7 @@ import { jsonResponse } from "./helpers";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
 import { TicketTypeIdParamSchema } from "../schemas/ticketType.schema";
 import { AllEventsSuccess, CreateEventRequest, EventBookingsSuccess, EventCreatedSuccess, EventIdParamSchema, EventSuccess, OwnEventsSuccess, PatchTicketTypeRequest, PostTicketTypeRequest, TicketTypeSuccess, UpdateEventRequest } from "./components";
+import { eventIdParamSchema } from "../schemas/event.schema";
 
 registry.registerPath({
   method: "get",
@@ -206,6 +207,24 @@ registry.registerPath({
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     403: jsonResponse("Not an ORGANIZER or ADMIN", MessageFailResponse),
     404: jsonResponse("Event not found or it isn't yours", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  }
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/events/{eventId}/cancel",
+  tags: ["Events"],
+  summary: "Cancel an event",
+  description: "Cancels a DRAFT or PUBLISHED event that has not yet started. All associated confirmed bookings are cancelled, and their valid tickets are invalidated. Allowed for the event's organizer and admins. Requires the ORGANIZER or ADMIN role.",
+  security: [{ [bearerAuth.name]: [] }],
+  request: { params: EventIdParamSchema },
+  responses: {
+    204: { description: "Event cancelled successfully" },
+    400: jsonResponse("Invalid eventId", ValidationFailResponse),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    404: jsonResponse("Event not found or you are not allowed to see it", MessageFailResponse),
+    409: jsonResponse("Event is already cancelled or has already started", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
 });
