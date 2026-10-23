@@ -29,7 +29,7 @@ export async function registerUser(name: string, email: string, password: string
 export async function loginUser(email: string, password: string) {
 
   const user = await prisma.user.findUnique({
-    where: { email }
+    where: { email, deletedAt: null }
   });
 
   if (!user) {
