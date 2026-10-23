@@ -2,7 +2,7 @@ import { Prisma } from "../../prisma/generated/client";
 import { BookingStatus, EventStatus, TicketTypeKind } from "../../prisma/generated/enums";
 import { AppError } from "../errorhandling/appError";
 import prisma from "../lib/prisma";
-import { CreateEventInput, PatchEventInput } from "../schemas/event.schema";
+import { CheckInInfo, CreateEventInput, PatchEventInput } from "../schemas/event.schema";
 import { CreateTicketTypeInput, PatchTicketTypeInput } from "../schemas/ticketType.schema";
 import { AuthenticatedUser } from "../types/auth";
 
@@ -413,5 +413,60 @@ export async function getEventBookingsService(eventId: string) {
       activeTicketsCount, cancelledTicketsCount
     }
   });
+
+};
+
+export async function checkInService(eventId: string, codeInfo: CheckInInfo, userId: string) {
+
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { startsAt: true, endsAt: true, status: true }
+  });
+
+  if (!event) {
+    throw new AppError(404, "Event not found");
+  }
+
+  if (event.status !== 'PUBLISHED') {
+    throw new AppError(409, "Event is not published");
+  }
+
+  const now = new Date();
+
+  if (event.startsAt > now) {
+    throw new AppError(409, "Event has not started yet");
+  }
+
+  if (now > event.endsAt) {
+    throw new AppError(409, "Event has ended");
+  }
+
+  const ticket = await prisma.ticket.findUnique({
+    where: { code: codeInfo.code },
+    select: { id: true, status: true, ticketType: { select: { type: true } }, booking: { select: { eventId: true } } }
+  });
+
+  if (!ticket) {
+    throw new AppError(404, "Ticket not found");
+  }
+
+  if (ticket.status !== 'VALID') {
+    throw new AppError(409, "Ticket is not valid");
+  }
+
+  if (ticket.booking.eventId !== eventId) {
+    throw new AppError(404, "Ticket not found");
+  }
+
+  const result = await prisma.ticket.updateMany({
+    where: { id: ticket.id, status: "VALID" },
+    data: { status: "USED", usedAt: now, checkedInById: userId },
+  });
+
+  if (result.count === 0) {
+    throw new AppError(409, "Ticket is already used or cancelled");
+  }
+
+  return ticket.ticketType.type;
 
 };

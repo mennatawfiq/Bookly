@@ -2,9 +2,9 @@ import Router from "express";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { authenticate, authorize, optionalAuthenticate, requireOwnership } from "../middlewares/auth";
 import prisma from "../lib/prisma";
-import { cancelEvent, deleteTicketType, getEvent, getEventBookings, getEvents, getMyEvents, patchEvent, patchTicketType, postBooking, postEvent, postTicketType, publishEvent } from "../controllers/event.controllers";
+import { cancelEvent, checkIn, deleteTicketType, getEvent, getEventBookings, getEvents, getMyEvents, patchEvent, patchTicketType, postBooking, postEvent, postTicketType, publishEvent } from "../controllers/event.controllers";
 import { validate } from "../middlewares/validate";
-import { eventIdParamSchema, CreateEventSchema, PatchEventSchema } from "../schemas/event.schema";
+import { eventIdParamSchema, CreateEventSchema, PatchEventSchema, CheckInSchema } from "../schemas/event.schema";
 import { CreateTicketTypeSchema, PatchTicketTypeSchema, TicketTypeIdParamSchema } from "../schemas/ticketType.schema";
 import { CreateBookingSchema } from "../schemas/booking.schema";
 
@@ -55,6 +55,8 @@ router.get("/:eventId/bookings", authenticate, authorize('ADMIN', 'ORGANIZER'), 
 
 router.post("/:eventId/bookings", authenticate, validate(eventIdParamSchema, "params"), validate(CreateBookingSchema), asyncHandler(postBooking));
 
-export default router;
+router.post("/:eventId/check-ins", authenticate, authorize('ORGANIZER'), validate(eventIdParamSchema, "params"),
+  validate(CheckInSchema), requireOwnership({ model: prisma.event, paramName: "eventId", ownerField: "organizerId", resourceName: "Event" }),
+  asyncHandler(checkIn));
 
-// POST /events/:eventId/check-ins // send ticket QR code in the body
+export default router;
