@@ -2,8 +2,9 @@ import { z } from "zod";
 import { registry } from "./registry";
 import { jsendSuccess } from "../schemas/jsend.schema";
 import { bookingIdParamSchema, BookingListItemSchema, BookingTicketsDetailSchema, CreateBookingSchema, EventBookingListItemSchema, PatchTicketCountSchema, UserBookingDetailSchema, UserBookingListItemSchema } from "../schemas/booking.schema";
-import { CreateEventSchema, eventIdParamSchema, EventSchema, PatchEventSchema } from "../schemas/event.schema";
+import { CheckInSchema, CreateEventSchema, eventIdParamSchema, EventSchema, PatchEventSchema } from "../schemas/event.schema";
 import { CreateTicketTypeSchema, PatchTicketTypeSchema, TicketTypeSummarySchema } from "../schemas/ticketType.schema";
+import { TicketTypeKind } from "../../prisma/generated/enums";
 
 // Events
 
@@ -32,7 +33,8 @@ export const PatchTicketTypeRequest = registry.register("PatchTicketTypeRequest"
 export const EventBookingListItem = registry.register("EventBookingListItem", EventBookingListItemSchema);
 export const EventBookingsSuccess = registry.register("EventBookingsSuccess", jsendSuccess(z.object({ bookings: z.array(EventBookingListItem) })));
 
-
+export const TicketCheckInRequest = registry.register("TicketCheckInRequest", CheckInSchema);
+export const TicketCheckInSuccess = registry.register("TicketCheckInSuccess", jsendSuccess(z.object({ type: z.enum(TicketTypeKind) })));
 
 // Bookings
 

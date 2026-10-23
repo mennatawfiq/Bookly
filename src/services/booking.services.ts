@@ -1,4 +1,3 @@
-import { exactOptional } from "zod";
 import { Prisma } from "../../prisma/generated/client";
 import { BookingStatus, EventStatus, TicketStatus, TicketTypeKind } from "../../prisma/generated/enums";
 import { AppError } from "../errorhandling/appError";

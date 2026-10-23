@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getEventsService, getEventService, getMyEventsService, postEventService, patchEventService, publishEventService, postTicketTypeService, patchTicketTypeService, deleteTicketTypeService, getEventBookingsService } from "../services/event.services";
+import { getEventsService, getEventService, getMyEventsService, postEventService, patchEventService, publishEventService, postTicketTypeService, patchTicketTypeService, deleteTicketTypeService, getEventBookingsService, cancelEventService, checkInService } from "../services/event.services";
 import { AppError } from "../errorhandling/appError";
 import { postBookingService } from "../services/booking.services";
 
@@ -84,19 +84,19 @@ export const publishEvent = async (req: Request, res: Response) => {
 
 };
 
-// export const cancelEvent = async (req: Request, res: Response) => {
+export const cancelEvent = async (req: Request, res: Response) => {
 
-//   const { eventId } = req.params;
+  const { eventId } = req.params;
 
-//   if (typeof eventId !== "string") {
-//     throw new AppError(400, "Invalid eventId");
-//   }
+  if (typeof eventId !== "string") {
+    throw new AppError(400, "Invalid eventId");
+  }
 
-//   const event = await cancelEventService(eventId);
+  await cancelEventService(eventId);
 
-//   res.jsend.success({ event }, 200);
+  res.status(204).send();
 
-// };
+};
 
 export const postTicketType = async (req: Request, res: Response) => {
 
@@ -185,5 +185,26 @@ export const postBooking = async (req: Request, res: Response) => {
   const booking = await postBookingService(userId, eventId, bookingInfo);
 
   res.jsend.success({ booking }, 201);
+
+};
+
+export const checkIn = async (req: Request, res: Response) => {
+
+  const { eventId } = req.params;
+  const userId = req.user?.id;
+
+  if (typeof eventId !== "string") {
+    throw new AppError(400, "Invalid eventId");
+  }
+
+  if (typeof userId !== "string") {
+    throw new AppError(400, "Invalid userId");
+  }
+
+  const checkInInfo = req.body;
+
+  const type = await checkInService(eventId, checkInInfo, userId);
+
+  res.jsend.success({ type }, 200);
 
 };

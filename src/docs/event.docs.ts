@@ -3,7 +3,8 @@ import { bearerAuth, registry } from "./registry";
 import { jsonResponse } from "./helpers";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
 import { TicketTypeIdParamSchema } from "../schemas/ticketType.schema";
-import { AllEventsSuccess, CreateEventRequest, EventBookingsSuccess, EventCreatedSuccess, EventIdParamSchema, EventSuccess, OwnEventsSuccess, PatchTicketTypeRequest, PostTicketTypeRequest, TicketTypeSuccess, UpdateEventRequest } from "./components";
+import { AllEventsSuccess, CreateEventRequest, EventBookingsSuccess, EventCreatedSuccess, EventIdParamSchema, EventSuccess, OwnEventsSuccess, PatchTicketTypeRequest, PostTicketTypeRequest, TicketCheckInRequest, TicketCheckInSuccess, TicketTypeSuccess, UpdateEventRequest } from "./components";
+import { eventIdParamSchema } from "../schemas/event.schema";
 
 registry.registerPath({
   method: "get",
@@ -206,6 +207,49 @@ registry.registerPath({
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     403: jsonResponse("Not an ORGANIZER or ADMIN", MessageFailResponse),
     404: jsonResponse("Event not found or it isn't yours", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  }
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/events/{eventId}/cancel",
+  tags: ["Events"],
+  summary: "Cancel an event",
+  description: "Cancels a DRAFT or PUBLISHED event that has not yet started. All associated confirmed bookings are cancelled, and their valid tickets are invalidated. Allowed for the event's organizer and admins. Requires the ORGANIZER or ADMIN role.",
+  security: [{ [bearerAuth.name]: [] }],
+  request: { params: EventIdParamSchema },
+  responses: {
+    204: { description: "Event cancelled successfully" },
+    400: jsonResponse("Invalid eventId", ValidationFailResponse),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    404: jsonResponse("Event not found or you are not allowed to see it", MessageFailResponse),
+    409: jsonResponse("Event is already cancelled or has already started", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  }
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/events/{eventId}/check-ins",
+  tags: ["Events"],
+  summary: "Check-in a ticket",
+  description: "Checks-in a `VALID` ticket of a `PUBLISHED` event that has started and not yet ended. Allowed for the event's organizer only. Requires the `ORGANIZER` role.",
+  security: [{ [bearerAuth.name]: [] }],
+  request: {
+    params: EventIdParamSchema,
+    body: {
+      required: true,
+      content: { "application/json": { schema: TicketCheckInRequest } }
+    }
+  },
+  responses: {
+    200: jsonResponse("Ticket type", TicketCheckInSuccess),
+    400: jsonResponse("Invalid eventId or code", ValidationFailResponse),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    403: jsonResponse("Not an ORGANIZER", MessageFailResponse),
+    404: jsonResponse("Event or ticket not found or you are not allowed to see it", MessageFailResponse),
+    409: jsonResponse("Event is not published, has not started, or has ended, or the ticket is not valid (already used or cancelled)", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
 });

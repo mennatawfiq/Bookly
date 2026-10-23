@@ -58,3 +58,8 @@ export const PatchEventSchema = EventInputSchema.partial().refine(
   }
 );
 export type PatchEventInput = z.infer<typeof PatchEventSchema>;
+
+export const CheckInSchema = z.object({
+  code: z.base64url()
+});
+export type CheckInInfo = z.infer<typeof CheckInSchema>;
