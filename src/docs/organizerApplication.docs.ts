@@ -1,7 +1,8 @@
 import { bearerAuth, registry } from "./registry";
 import { jsonResponse } from "./helpers";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
-import { ApplicationIdParam, CreateApplicationRequest, CreateApplicationSuccess, MyApplicationsSuccess, MyApplicationSuccess } from "./components";
+import { AllApplicationsSuccess, ApplicationIdParam, CreateApplicationRequest, CreateApplicationSuccess, MyApplicationsSuccess, MyApplicationSuccess } from "./components";
+import { ListApplicationsQuerySchema } from "../schemas/organizerApplication.schema";
 
 registry.registerPath({
   method: "post",
@@ -55,6 +56,24 @@ registry.registerPath({
     400: jsonResponse("Invalid applicationId", ValidationFailResponse),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     404: jsonResponse("Application not found, or you are not allowed to see it", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/organizer-applications",
+  tags: ["Organizer Applications"],
+  summary: "List all applications",
+  description: "Returns all organizer applications, newest first, with the name and email of the applicant. Use `status` to return only `PENDING`, `APPROVED` or `REJECTED` applications. Requires the ADMIN role.",
+  security: [{ [bearerAuth.name]: [] }],
+  request: { query: ListApplicationsQuerySchema },
+  // later: pagination and limiting
+  responses: {
+    200: jsonResponse("List of applications", AllApplicationsSuccess),
+    400: jsonResponse("Invalid status value", ValidationFailResponse),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    403: jsonResponse("Not an ADMIN", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   },
 });

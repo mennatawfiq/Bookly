@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { AppError } from "../errorhandling/appError";
-import { getApplicationService, getMyApplicationsService, postApplicationService } from "../services/organizerApplication.services";
+import { getApplicationService, getApplicationsService, getMyApplicationsService, postApplicationService } from "../services/organizerApplication.services";
+import { ListApplicationsQuerySchema } from "../schemas/organizerApplication.schema";
 
 
 export const postApplication = async (req: Request, res: Response) => {
@@ -44,5 +45,15 @@ export const getApplication = async (req: Request, res: Response) => {
   const application = await getApplicationService(applicationId);
 
   res.jsend.success({ application }, 200);
+
+};
+
+export const getApplications = async (req: Request, res: Response) => {
+
+  const { status } = ListApplicationsQuerySchema.parse(req.query);
+
+  const applications = await getApplicationsService(status);
+
+  res.jsend.success({ applications }, 200);
 
 };

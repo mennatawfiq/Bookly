@@ -1,9 +1,9 @@
 import Router from "express";
 import { authenticate, authorize, requireOwnership } from "../middlewares/auth";
 import { validate } from "../middlewares/validate";
-import { applicationIdParamSchema, CreateApplicationSchema } from "../schemas/organizerApplication.schema";
+import { applicationIdParamSchema, CreateApplicationSchema, ListApplicationsQuerySchema } from "../schemas/organizerApplication.schema";
 import { asyncHandler } from "../middlewares/asyncHandler";
-import { getApplication, getMyApplications, postApplication } from "../controllers/organizerApplication.controllers";
+import { getApplication, getApplications, getMyApplications, postApplication } from "../controllers/organizerApplication.controllers";
 import prisma from "../lib/prisma";
 
 const router = Router();
@@ -16,6 +16,8 @@ router.get("/:applicationId", authenticate, validate(applicationIdParamSchema, "
   requireOwnership({ model: prisma.organizerApplication, paramName: "applicationId", ownerField: "userId", resourceName: "Application" }),
   asyncHandler(getApplication)
 );
+
+router.get("/", authenticate, authorize('ADMIN'), validate(ListApplicationsQuerySchema, "query"), asyncHandler(getApplications));
 
 // GET / //admin
 // POST /:id/approve //admin

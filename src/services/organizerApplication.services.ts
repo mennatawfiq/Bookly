@@ -1,3 +1,4 @@
+import { ApplicationStatus } from "../../prisma/generated/enums";
 import { AppError } from "../errorhandling/appError";
 import prisma from "../lib/prisma";
 import { CreateApplicationInput } from "../schemas/organizerApplication.schema";
@@ -84,5 +85,24 @@ export async function getApplicationService(applicationId: string) {
   }
 
   return application;
+
+};
+
+export async function getApplicationsService(status?: ApplicationStatus) {
+
+  return await prisma.organizerApplication.findMany({
+    where: status ? { status } : {},
+    select: {
+      id: true,
+      organizationName: true,
+      description: true,
+      status: true,
+      reviewNote: true,
+      reviewedAt: true,
+      createdAt: true,
+      user: { select: { id: true, name: true, email: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
 
 };
