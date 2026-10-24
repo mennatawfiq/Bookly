@@ -15,3 +15,7 @@ router.post("/", (req, res) => {
 
 export default router;
 
+// DELETE /useres/me
+// GET /useres/me
+// PATCH /users/me // change name or password
+// GET /users // for admin
