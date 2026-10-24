@@ -1,21 +1,17 @@
 import Router from "express";
-import { authenticate } from "../middlewares/auth";
+import { authenticate, authorize } from "../middlewares/auth";
+import { asyncHandler } from "../middlewares/asyncHandler";
+import { deleteMe, getMe, getUsers } from "../controllers/user.controllers";
 
 const router = Router();
 
-router.get("/", (req, res) => {
-  res.json({ message: "get alll users" });
-});
+router.get("/", authenticate, authorize("ADMIN"), asyncHandler(getUsers));
 
-// router.get("/:userId", authenticate);
+router.get("/me", authenticate, asyncHandler(getMe));
 
-router.post("/", (req, res) => {
-  res.json({ message: "one user created" });
-});
+router.delete("/me", authenticate, asyncHandler(deleteMe));
+
 
 export default router;
 
-// DELETE /useres/me
-// GET /useres/me
 // PATCH /users/me // change name or password
-// GET /users // for admin

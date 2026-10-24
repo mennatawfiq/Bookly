@@ -182,6 +182,45 @@ export async function postBookingService(userId: string, eventId: string, bookin
 
 };
 
+export async function cancelBookingsInTx(tx: Prisma.TransactionClient, bookingIds: string[], cancelledAt: Date) {
+  // Caller must already hold the Event (FOR SHARE) and Booking (FOR UPDATE) locks
+
+  if (bookingIds.length === 0) return;
+
+  const tickets = await tx.ticket.findMany({
+    where: { bookingId: { in: bookingIds }, status: "VALID" },
+    select: { id: true, ticketTypeId: true, booking: { select: { eventId: true } } },
+  });
+
+  await tx.booking.updateMany({
+    where: { id: { in: bookingIds } },
+    data: { status: "CANCELLED", cancelledAt },
+  });
+
+  if (tickets.length === 0) return;
+
+  const countByTypeId = new Map<string, number>();
+  for (const t of tickets) {
+    countByTypeId.set(t.ticketTypeId, (countByTypeId.get(t.ticketTypeId) ?? 0) + 1);
+  }
+
+  const typeIds = [...countByTypeId.keys()].sort();
+
+  await tx.$queryRaw`SELECT id FROM "TicketType" WHERE id IN (${Prisma.join(typeIds)}) ORDER BY id FOR UPDATE`;
+
+  await tx.ticket.updateMany({
+    where: { id: { in: tickets.map((t) => t.id) } },
+    data: { status: "CANCELLED", cancelledAt },
+  });
+
+  for (const typeId of typeIds) {
+    await tx.ticketType.update({
+      where: { id: typeId },
+      data: { remaining: { increment: countByTypeId.get(typeId)! } },
+    });
+  }
+}
+
 export async function cancelBookingService(bookingId: string) {
 
   // early fetch to get eventId to lock the event row
@@ -224,53 +263,7 @@ export async function cancelBookingService(bookingId: string) {
         throw new AppError(409, "Booking is already cancelled");
       }
 
-      const ticketRows = await tx.$queryRaw<{ id: string; ticketTypeId: string }[]>
-        `SELECT id, "ticketTypeId" FROM "Ticket" WHERE "bookingId" = ${bookingId} AND status = 'VALID'
-      ORDER BY id FOR UPDATE`;
-
-      const cancelledAt = new Date();
-
-      if (ticketRows.length === 0) {
-        await tx.booking.update({
-          where: { id: bookingId },
-          data: { status: "CANCELLED", cancelledAt }
-        });
-        return;
-      }
-
-      const ticketTypeIds = [...new Set(ticketRows.map((t) => t.ticketTypeId))];
-
-      await tx.$queryRaw`SELECT id FROM "TicketType" WHERE id IN (${Prisma.join(ticketTypeIds)}) AND 
-      "eventId" = ${booking.eventId} ORDER BY id FOR UPDATE`;
-
-      const ticketIds = ticketRows.map((t) => t.id);
-
-      await tx.ticket.updateMany({
-        where: { id: { in: ticketIds } },
-        data: { status: "CANCELLED", cancelledAt, }
-      });
-
-      const countByType = new Map<string, number>();
-
-      for (const t of ticketRows) {
-        const typeId = t.ticketTypeId;
-        countByType.set(typeId, (countByType.get(typeId) ?? 0) + 1);
-      }
-
-      // sort tickets by id to loop on it in one order
-      const sortedCounts = [...countByType].sort(([a], [b]) => a.localeCompare(b));
-
-      for (const [id, count] of sortedCounts) {
-        await tx.ticketType.update({
-          where: { id, eventId: booking.eventId },
-          data: { remaining: { increment: count } }
-        });
-      }
-
-      await tx.booking.update({
-        where: { id: bookingId },
-        data: { status: "CANCELLED", cancelledAt }
-      });
+      await cancelBookingsInTx(tx, [bookingId], new Date());
 
     });
 

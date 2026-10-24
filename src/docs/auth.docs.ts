@@ -1,17 +1,10 @@
 import { z } from "zod";
 import { registry } from "./registry";
-import { registerSchema, loginSchema } from "../schemas/auth.schema";
-import { UserSchema } from "../schemas/user.schema";
+import { loginSchema } from "../schemas/auth.schema";
 import { jsonResponse } from "./helpers";
 import { jsendSuccess } from "../schemas/jsend.schema";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
-
-
-export const User = registry.register("User", UserSchema);
-const UserSummary = registry.register("UserSummary", UserSchema.omit({ createdAt: true }));
-
-export const RegisterRequest = registry.register("RegisterRequest", registerSchema);
-const RegisterSuccess = registry.register("RegisterSuccess", jsendSuccess(z.object({ user: User })));
+import { RegisterRequest, RegisterSuccess, UserSummary } from "./components";
 
 registry.registerPath({
   method: "post",
