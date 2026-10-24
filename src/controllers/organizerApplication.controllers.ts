@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { AppError } from "../errorhandling/appError";
-import { getMyApplicationsService, postApplicationService } from "../services/organizerApplication.services";
+import { getApplicationService, getMyApplicationsService, postApplicationService } from "../services/organizerApplication.services";
 
 
 export const postApplication = async (req: Request, res: Response) => {
@@ -30,5 +30,19 @@ export const getMyApplications = async (req: Request, res: Response) => {
   const applications = await getMyApplicationsService(userId);
 
   res.jsend.success({ applications }, 200);
+
+};
+
+export const getApplication = async (req: Request, res: Response) => {
+
+  const { applicationId } = req.params;
+
+  if (typeof applicationId !== "string") {
+    throw new AppError(400, "Invalid applicationId");
+  }
+
+  const application = await getApplicationService(applicationId);
+
+  res.jsend.success({ application }, 200);
 
 };

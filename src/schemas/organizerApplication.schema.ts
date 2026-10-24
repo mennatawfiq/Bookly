@@ -23,3 +23,10 @@ export const ApplicationItemSchema = ApplicationSchema.extend({
   status: z.enum(ApplicationStatus).meta({ example: 'PENDING' }),
   createdAt: z.iso.datetime({ offset: true }).meta({ example: "2026-10-05T10:00:00.000Z" }),
 });
+
+export const applicationIdParamSchema = z.object({
+  applicationId: z.uuid().meta({
+    description: "The unique identifier of the application",
+    example: "1356e24a-d2da-4f15-80dd-89f0bbbfbc19",
+  }),
+});

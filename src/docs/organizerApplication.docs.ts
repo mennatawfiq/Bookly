@@ -1,7 +1,7 @@
 import { bearerAuth, registry } from "./registry";
 import { jsonResponse } from "./helpers";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
-import { CreateApplicationRequest, CreateApplicationSuccess, MyApplicationsSuccess } from "./components";
+import { ApplicationIdParam, CreateApplicationRequest, CreateApplicationSuccess, MyApplicationsSuccess, MyApplicationSuccess } from "./components";
 
 registry.registerPath({
   method: "post",
@@ -26,7 +26,6 @@ registry.registerPath({
   }
 });
 
-
 registry.registerPath({
   method: "get",
   path: "/organizer-applications/mine",
@@ -39,6 +38,23 @@ registry.registerPath({
   responses: {
     200: jsonResponse("List of your applications", MyApplicationsSuccess),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/organizer-applications/{applicationId}",
+  tags: ["Organizer Applications"],
+  summary: "Get an application",
+  description: "Returns one organizer application, including the admin's `reviewNote` once it is reviewed. Allowed for the user who created it and for admins. Anyone else gets a 404, the same as when the application does not exist. Requires authentication.",
+  security: [{ [bearerAuth.name]: [] }],
+  request: { params: ApplicationIdParam },
+  responses: {
+    200: jsonResponse("The application", MyApplicationSuccess),
+    400: jsonResponse("Invalid applicationId", ValidationFailResponse),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    404: jsonResponse("Application not found, or you are not allowed to see it", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   },
 });

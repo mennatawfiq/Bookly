@@ -63,3 +63,26 @@ export async function getMyApplicationsService(userId: string) {
   });
 
 };
+
+export async function getApplicationService(applicationId: string) {
+
+  const application = await prisma.organizerApplication.findUnique({
+    where: { id: applicationId },
+    select: {
+      id: true,
+      organizationName: true,
+      description: true,
+      status: true,
+      reviewNote: true,
+      reviewedAt: true,
+      createdAt: true,
+    },
+  });
+
+  if (!application) {
+    throw new AppError(404, "Application not found");
+  }
+
+  return application;
+
+};

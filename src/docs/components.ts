@@ -5,7 +5,7 @@ import { bookingIdParamSchema, BookingListItemSchema, BookingTicketsDetailSchema
 import { CheckInSchema, CreateEventSchema, eventIdParamSchema, EventSchema, PatchEventSchema } from "../schemas/event.schema";
 import { CreateTicketTypeSchema, PatchTicketTypeSchema, TicketTypeSummarySchema } from "../schemas/ticketType.schema";
 import { TicketTypeKind } from "../../prisma/generated/enums";
-import { ApplicationItemSchema, ApplicationSchema, CreateApplicationSchema } from "../schemas/organizerApplication.schema";
+import { applicationIdParamSchema, ApplicationItemSchema, ApplicationSchema, CreateApplicationSchema } from "../schemas/organizerApplication.schema";
 
 // Events
 
@@ -63,3 +63,6 @@ export const CreateApplicationSuccess = registry.register("CreateApplicationSucc
 
 export const ApplicationItem = registry.register("ApplicationItem", ApplicationItemSchema);
 export const MyApplicationsSuccess = registry.register("MyApplicationsSuccess", jsendSuccess(z.object({ applications: z.array(ApplicationItem) })));
+
+export const ApplicationIdParam = registry.register("ApplicationIdParam", applicationIdParamSchema);
+export const MyApplicationSuccess = registry.register("MyApplicationSuccess", jsendSuccess(z.object({ application: ApplicationItem })));
