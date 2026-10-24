@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { AppError } from "../errorhandling/appError";
-import { getApplicationService, getApplicationsService, getMyApplicationsService, postApplicationService } from "../services/organizerApplication.services";
+import { approveApplicationService, getApplicationService, getApplicationsService, getMyApplicationsService, postApplicationService, rejectApplicationService } from "../services/organizerApplication.services";
 import { ListApplicationsQuerySchema } from "../schemas/organizerApplication.schema";
 
 
@@ -55,5 +55,49 @@ export const getApplications = async (req: Request, res: Response) => {
   const applications = await getApplicationsService(status);
 
   res.jsend.success({ applications }, 200);
+
+};
+
+export const approveApplication = async (req: Request, res: Response) => {
+
+  const adminId = req.user?.id;
+
+  if (typeof adminId !== "string") {
+    throw new AppError(400, "Invalid adminId");
+  }
+
+  const { applicationId } = req.params;
+
+  if (typeof applicationId !== "string") {
+    throw new AppError(400, "Invalid applicationId");
+  }
+
+  const { reviewNote } = req.body;
+
+  const application = await approveApplicationService(applicationId, adminId, reviewNote);
+
+  res.jsend.success({ application }, 200);
+
+};
+
+export const rejectApplication = async (req: Request, res: Response) => {
+
+  const adminId = req.user?.id;
+
+  if (typeof adminId !== "string") {
+    throw new AppError(400, "Invalid adminId");
+  }
+
+  const { applicationId } = req.params;
+
+  if (typeof applicationId !== "string") {
+    throw new AppError(400, "Invalid applicationId");
+  }
+
+  const { reviewNote } = req.body;
+
+  const application = await rejectApplicationService(applicationId, adminId, reviewNote);
+
+  res.jsend.success({ application }, 200);
 
 };

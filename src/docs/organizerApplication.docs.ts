@@ -1,7 +1,7 @@
 import { bearerAuth, registry } from "./registry";
 import { jsonResponse } from "./helpers";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
-import { AllApplicationsSuccess, ApplicationIdParam, CreateApplicationRequest, CreateApplicationSuccess, MyApplicationsSuccess, MyApplicationSuccess } from "./components";
+import { AllApplicationsSuccess, ApplicationIdParam, ApproveApplicationRequest, CreateApplicationRequest, CreateApplicationSuccess, MyApplicationsSuccess, ApplicationSuccess, RejectApplicationRequest } from "./components";
 import { ListApplicationsQuerySchema } from "../schemas/organizerApplication.schema";
 
 registry.registerPath({
@@ -52,7 +52,7 @@ registry.registerPath({
   security: [{ [bearerAuth.name]: [] }],
   request: { params: ApplicationIdParam },
   responses: {
-    200: jsonResponse("The application", MyApplicationSuccess),
+    200: jsonResponse("The application", ApplicationSuccess),
     400: jsonResponse("Invalid applicationId", ValidationFailResponse),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     404: jsonResponse("Application not found, or you are not allowed to see it", MessageFailResponse),
@@ -74,6 +74,56 @@ registry.registerPath({
     400: jsonResponse("Invalid status value", ValidationFailResponse),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     403: jsonResponse("Not an ADMIN", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/organizer-applications/{applicationId}/approve",
+  tags: ["Organizer Applications"],
+  summary: "Approve an application",
+  description: "Approves a `PENDING` organizer application. In one transaction, the application becomes `APPROVED`, the reviewing admin and the review time are recorded, and the applicant's role changes to `ORGANIZER`. `reviewNote` is optional. A reviewed application cannot be changed again. Requires the ADMIN role.",
+  security: [{ [bearerAuth.name]: [] }],
+  request: {
+    params: ApplicationIdParam,
+    body: {
+      required: true,
+      content: { "application/json": { schema: ApproveApplicationRequest } },
+    },
+  },
+  responses: {
+    200: jsonResponse("The approved application", ApplicationSuccess),
+    400: jsonResponse("Validation failed", ValidationFailResponse),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    403: jsonResponse("Not an ADMIN", MessageFailResponse),
+    404: jsonResponse("Application not found", MessageFailResponse),
+    409: jsonResponse("The application is not `PENDING`, or the applicant's account was deleted", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/organizer-applications/{applicationId}/reject",
+  tags: ["Organizer Applications"],
+  summary: "Reject an application",
+  description: "Rejects a `PENDING` organizer application. `reviewNote` is required, and the applicant can read it. The rejection time starts the 3-day period after which the user can apply again. A reviewed application cannot be changed again. Requires the ADMIN role.",
+  security: [{ [bearerAuth.name]: [] }],
+  request: {
+    params: ApplicationIdParam,
+    body: {
+      required: true,
+      content: { "application/json": { schema: RejectApplicationRequest } },
+    },
+  },
+  responses: {
+    200: jsonResponse("The rejected application", ApplicationSuccess),
+    400: jsonResponse("Validation failed, for example a missing `reviewNote`", ValidationFailResponse),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    403: jsonResponse("Not an ADMIN", MessageFailResponse),
+    404: jsonResponse("Application not found", MessageFailResponse),
+    409: jsonResponse("The application is not `PENDING`", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   },
 });

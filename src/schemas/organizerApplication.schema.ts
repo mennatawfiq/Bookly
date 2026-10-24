@@ -44,3 +44,15 @@ export const AdminApplicationItemSchema = ApplicationItemSchema.extend({
     email: z.email().meta({ example: "jane@example.com" }),
   }),
 });
+
+export const ApproveApplicationSchema = z.object({
+  reviewNote: z.string().trim().min(2).max(1000).optional().meta({ example: "Meets all requirements" })
+});
+
+export type ApproveApplication = z.infer<typeof ApproveApplicationSchema>;
+
+export const RejectApplicationSchema = z.object({
+  reviewNote: z.string().trim().min(2).max(1000).meta({ example: "Does not meet all requirements" })
+});
+
+export type RejectApplication = z.infer<typeof RejectApplicationSchema>;

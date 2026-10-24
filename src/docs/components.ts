@@ -5,7 +5,7 @@ import { bookingIdParamSchema, BookingListItemSchema, BookingTicketsDetailSchema
 import { CheckInSchema, CreateEventSchema, eventIdParamSchema, EventSchema, PatchEventSchema } from "../schemas/event.schema";
 import { CreateTicketTypeSchema, PatchTicketTypeSchema, TicketTypeSummarySchema } from "../schemas/ticketType.schema";
 import { TicketTypeKind } from "../../prisma/generated/enums";
-import { AdminApplicationItemSchema, applicationIdParamSchema, ApplicationItemSchema, ApplicationSchema, CreateApplicationSchema } from "../schemas/organizerApplication.schema";
+import { AdminApplicationItemSchema, applicationIdParamSchema, ApplicationItemSchema, ApplicationSchema, ApproveApplicationSchema, CreateApplicationSchema, RejectApplicationSchema } from "../schemas/organizerApplication.schema";
 
 // Events
 
@@ -65,7 +65,10 @@ export const ApplicationItem = registry.register("ApplicationItem", ApplicationI
 export const MyApplicationsSuccess = registry.register("MyApplicationsSuccess", jsendSuccess(z.object({ applications: z.array(ApplicationItem) })));
 
 export const ApplicationIdParam = registry.register("ApplicationIdParam", applicationIdParamSchema);
-export const MyApplicationSuccess = registry.register("MyApplicationSuccess", jsendSuccess(z.object({ application: ApplicationItem })));
+export const ApplicationSuccess = registry.register("ApplicationSuccess", jsendSuccess(z.object({ application: ApplicationItem })));
 
 export const AdminApplicationItem = registry.register("AdminApplicationItem", AdminApplicationItemSchema);
 export const AllApplicationsSuccess = registry.register("AllApplicationsSuccess", jsendSuccess(z.object({ applications: z.array(AdminApplicationItem) })));
+
+export const ApproveApplicationRequest = registry.register("ApproveApplicationRequest", ApproveApplicationSchema);
+export const RejectApplicationRequest = registry.register("RejectApplicationRequest", RejectApplicationSchema);

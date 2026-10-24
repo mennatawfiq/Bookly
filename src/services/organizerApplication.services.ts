@@ -1,7 +1,7 @@
 import { ApplicationStatus } from "../../prisma/generated/enums";
 import { AppError } from "../errorhandling/appError";
 import prisma from "../lib/prisma";
-import { CreateApplicationInput } from "../schemas/organizerApplication.schema";
+import { ApproveApplication, CreateApplicationInput, RejectApplication } from "../schemas/organizerApplication.schema";
 
 export async function postApplicationService(userId: string, applicationInfo: CreateApplicationInput) {
 
@@ -104,5 +104,76 @@ export async function getApplicationsService(status?: ApplicationStatus) {
     },
     orderBy: { createdAt: "desc" },
   });
+
+};
+
+export async function approveApplicationService(applicationId: string, adminId: string, reviewNote?: string) {
+
+  const application = await prisma.organizerApplication.findFirst({ where: { id: applicationId, status: "PENDING" }, select: { userId: true } })
+
+  if (!application) {
+    throw new AppError(404, "Application not found");
+  }
+
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${application?.userId} FOR UPDATE`;
+
+      await tx.$queryRaw`SELECT id FROM "OrganizerApplication" WHERE id = ${applicationId} FOR UPDATE`;
+
+      await tx.organizerApplication.update({
+        where: { id: applicationId, status: "PENDING" },
+        data: {
+          reviewedById: adminId,
+          status: "APPROVED",
+          reviewedAt: new Date(),
+          reviewNote: reviewNote ?? null
+        }
+      });
+
+      const user = await tx.user.update({
+        where: { id: application.userId, role: 'USER' },
+        data: { role: 'ORGANIZER' }
+      });
+
+      if (!user || user.deletedAt) {
+        throw new AppError(409, "The applicant's account was deleted");
+      }
+
+    }
+  );
+
+  return await getApplicationService(applicationId);
+
+};
+
+export async function rejectApplicationService(applicationId: string, adminId: string, reviewNote: string) {
+
+  const application = await prisma.organizerApplication.findFirst({ where: { id: applicationId, status: "PENDING" }, select: { userId: true } })
+
+  if (!application) {
+    throw new AppError(404, "Application not found");
+  }
+
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${application?.userId} FOR UPDATE`;
+
+      await tx.$queryRaw`SELECT id FROM "OrganizerApplication" WHERE id = ${applicationId} FOR UPDATE`;
+
+      await tx.organizerApplication.update({
+        where: { id: applicationId, status: "PENDING" },
+        data: {
+          reviewedById: adminId,
+          status: "REJECTED",
+          reviewedAt: new Date(),
+          reviewNote
+        }
+      });
+
+    }
+  );
+
+  return await getApplicationService(applicationId);
 
 };

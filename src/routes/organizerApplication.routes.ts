@@ -1,9 +1,9 @@
 import Router from "express";
 import { authenticate, authorize, requireOwnership } from "../middlewares/auth";
 import { validate } from "../middlewares/validate";
-import { applicationIdParamSchema, CreateApplicationSchema, ListApplicationsQuerySchema } from "../schemas/organizerApplication.schema";
+import { applicationIdParamSchema, ApproveApplicationSchema, CreateApplicationSchema, ListApplicationsQuerySchema, RejectApplicationSchema } from "../schemas/organizerApplication.schema";
 import { asyncHandler } from "../middlewares/asyncHandler";
-import { getApplication, getApplications, getMyApplications, postApplication } from "../controllers/organizerApplication.controllers";
+import { approveApplication, getApplication, getApplications, getMyApplications, postApplication, rejectApplication } from "../controllers/organizerApplication.controllers";
 import prisma from "../lib/prisma";
 
 const router = Router();
@@ -19,8 +19,10 @@ router.get("/:applicationId", authenticate, validate(applicationIdParamSchema, "
 
 router.get("/", authenticate, authorize('ADMIN'), validate(ListApplicationsQuerySchema, "query"), asyncHandler(getApplications));
 
-// GET / //admin
-// POST /:id/approve //admin
-// POST /:id/reject //admin
+router.post("/:applicationId/approve", authenticate, authorize('ADMIN'), validate(applicationIdParamSchema, "params"),
+  validate(ApproveApplicationSchema), asyncHandler(approveApplication));
+
+router.post("/:applicationId/reject", authenticate, authorize('ADMIN'), validate(applicationIdParamSchema, "params"),
+  validate(RejectApplicationSchema), asyncHandler(rejectApplication));
 
 export default router;
