@@ -5,14 +5,15 @@ import eventRouter from "./event.routes";
 import userRouter from "./user.routes";
 import ticketRouter from "./ticket.routes";
 import bookingRouter from "./booking.routes";
+import organizerApplicationsRouter from "./organizerApplication.routes"
 
 const router = Router();
 
 router.use("/auth", authRouter);
-router.use("/events", eventRouter);// authentication/authorization, body validation
+router.use("/events", eventRouter);
 router.use("/users", userRouter);
 router.use("/tickets", ticketRouter);
 router.use("/bookings", bookingRouter);
-
+router.use("/organizer-applications", organizerApplicationsRouter);
 
 export default router;
