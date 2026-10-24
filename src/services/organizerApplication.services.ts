@@ -45,3 +45,21 @@ export async function postApplicationService(userId: string, applicationInfo: Cr
   return application;
 
 };
+
+export async function getMyApplicationsService(userId: string) {
+
+  return await prisma.organizerApplication.findMany({
+    where: { userId },
+    select: {
+      id: true,
+      organizationName: true,
+      description: true,
+      status: true,
+      reviewNote: true,
+      reviewedAt: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+};

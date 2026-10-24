@@ -3,13 +3,14 @@ import { authenticate, authorize } from "../middlewares/auth";
 import { validate } from "../middlewares/validate";
 import { CreateApplicationSchema } from "../schemas/organizerApplication.schema";
 import { asyncHandler } from "../middlewares/asyncHandler";
-import { postApplication } from "../controllers/organizerApplication.controllers";
+import { getMyApplications, postApplication } from "../controllers/organizerApplication.controllers";
 
 const router = Router();
 
 router.post("/", authenticate, authorize('USER'), validate(CreateApplicationSchema), asyncHandler(postApplication));
 
-// GET /mine
+router.get("/mine", authenticate, asyncHandler(getMyApplications));
+
 // GET /:id
 // GET / //admin
 // POST /:id/approve //admin

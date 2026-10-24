@@ -1,8 +1,7 @@
-import { z } from "zod";
 import { bearerAuth, registry } from "./registry";
 import { jsonResponse } from "./helpers";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
-import { CreateApplicationRequest, CreateApplicationSuccess } from "./components";
+import { CreateApplicationRequest, CreateApplicationSuccess, MyApplicationsSuccess } from "./components";
 
 registry.registerPath({
   method: "post",
@@ -25,4 +24,21 @@ registry.registerPath({
     409: jsonResponse("pending application exists, or the cooldown has not passed", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
+});
+
+
+registry.registerPath({
+  method: "get",
+  path: "/organizer-applications/mine",
+  tags: ["Organizer Applications"],
+  summary: "List my applications",
+  description: "Returns all organizer applications of the authenticated user, newest first, including approved and rejected ones. `reviewNote` is the admin's reason, and it is `null` until the application is reviewed. Requires authentication.",
+  security: [{ [bearerAuth.name]: [] }],
+  // request: { // later: pagination and limiting
+  // },
+  responses: {
+    200: jsonResponse("List of your applications", MyApplicationsSuccess),
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  },
 });
