@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { AppError } from "../errorhandling/appError";
-import { getMeService, getUsersService } from "../services/user.services";
+import { deleteMeService, getMeService, getUsersService } from "../services/user.services";
 import { ListUsersQuerySchema } from "../schemas/user.schema";
 
 export const getMe = async (req: Request, res: Response) => {
@@ -24,5 +24,19 @@ export const getUsers = async (req: Request, res: Response) => {
   const users = await getUsersService(role);
 
   res.jsend.success({ users }, 200);
+
+};
+
+export const deleteMe = async (req: Request, res: Response) => {
+
+  const userId = req.user?.id;
+
+  if (typeof userId !== "string") {
+    throw new AppError(400, "Invalid userId");
+  }
+
+  await deleteMeService(userId);
+
+  res.status(204).send();
 
 };

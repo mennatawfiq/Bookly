@@ -35,3 +35,19 @@ registry.registerPath({
     500: jsonResponse("Internal server error", ServerErrorResponse),
   },
 });
+
+registry.registerPath({
+  method: "delete",
+  path: "/users/me",
+  tags: ["Users"],
+  summary: "Delete my account",
+  description: "Deletes the authenticated user's account by anonymizing it. The name, email and password are replaced, and the user can no longer log in, including with tokens already issued. Upcoming `CONFIRMED` bookings are cancelled and their tickets are returned to stock. A `PENDING` organizer application is rejected. Past bookings, tickets, events and applications are kept and show the user as \"Deleted user\". An organizer with an upcoming or running published event cannot delete their account until it is cancelled or has ended. The only admin cannot delete their account. Requires authentication.",
+  security: [{ [bearerAuth.name]: [] }],
+  responses: {
+    204: { description: "Account deleted successfully" },
+    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
+    404: jsonResponse("User not found", MessageFailResponse),
+    409: jsonResponse("The organizer has an upcoming or running event, or the user is the only admin", MessageFailResponse),
+    500: jsonResponse("Internal server error", ServerErrorResponse),
+  },
+});
