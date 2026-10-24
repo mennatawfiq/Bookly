@@ -6,6 +6,8 @@ import { CheckInSchema, CreateEventSchema, eventIdParamSchema, EventSchema, Patc
 import { CreateTicketTypeSchema, PatchTicketTypeSchema, TicketTypeSummarySchema } from "../schemas/ticketType.schema";
 import { TicketTypeKind } from "../../prisma/generated/enums";
 import { AdminApplicationItemSchema, applicationIdParamSchema, ApplicationItemSchema, ApplicationSchema, ApproveApplicationSchema, CreateApplicationSchema, RejectApplicationSchema } from "../schemas/organizerApplication.schema";
+import { AdminUserItemSchema, UserSchema } from "../schemas/user.schema";
+import { registerSchema } from "../schemas/auth.schema";
 
 // Events
 
@@ -72,3 +74,18 @@ export const AllApplicationsSuccess = registry.register("AllApplicationsSuccess"
 
 export const ApproveApplicationRequest = registry.register("ApproveApplicationRequest", ApproveApplicationSchema);
 export const RejectApplicationRequest = registry.register("RejectApplicationRequest", RejectApplicationSchema);
+
+// Users
+
+
+export const User = registry.register("User", UserSchema);
+export const UserSummary = registry.register("UserSummary", UserSchema.omit({ createdAt: true }));
+
+export const RegisterRequest = registry.register("RegisterRequest", registerSchema);
+export const RegisterSuccess = registry.register("RegisterSuccess", jsendSuccess(z.object({ user: User })));
+
+export const UserProfile = registry.register("UserProfile", UserSchema);
+export const MeSuccess = registry.register("MeSuccess", jsendSuccess(z.object({ user: UserProfile })));
+
+export const AdminUserItem = registry.register("AdminUserItem", AdminUserItemSchema);
+export const AllUsersSuccess = registry.register("AllUsersSuccess", jsendSuccess(z.object({ users: z.array(AdminUserItem) })));

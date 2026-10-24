@@ -8,3 +8,16 @@ export const UserSchema = z.object({
   role: z.enum(UserRole).meta({ example: "USER" }),
   createdAt: z.iso.datetime().meta({ example: "2026-10-02T09:30:00.000Z" }),
 });
+
+export const AdminUserItemSchema = UserSchema.extend({
+  deletedAt: z.iso.datetime().nullable().meta({ example: null }),
+});
+
+export const ListUsersQuerySchema = z.object({
+  role: z.enum(UserRole).optional().meta({
+    description: "Only return users with this role",
+    example: "ORGANIZER",
+  }),
+});
+
+export type ListUsersQuery = z.infer<typeof ListUsersQuerySchema>;
