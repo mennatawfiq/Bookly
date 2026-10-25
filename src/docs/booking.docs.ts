@@ -3,7 +3,7 @@ import { bearerAuth, registry } from "./registry";
 import { jsonResponse } from "./helpers";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
 import { AllBookingsSuccess, BookingIdParamSchema, BookingTicketsDetailSuccess, CreateBookingRequest, EventIdParamSchema, PatchTicketCountRequest, UserBookingDetailSuccess, UserBookingsSuccess } from "./components";
-import { CancelTicketParamSchema } from "../schemas/booking.schema";
+import { CancelTicketParamSchema, ListBookingsQuerySchema } from "../schemas/booking.schema";
 
 registry.registerPath({
   method: "get",
@@ -11,8 +11,7 @@ registry.registerPath({
   tags: ["Bookings"],
   summary: "List all bookings",
   description: "Returns every booking on the platform, newest first, with the user's name and email and the event's title and start time. Requires the ADMIN role.",
-  // request: { // later: pagination and limiting
-  // },
+  request: { query: ListBookingsQuerySchema },
   security: [{ [bearerAuth.name]: [] }],
   responses: {
     200: jsonResponse("List of all bookings", AllBookingsSuccess),
@@ -29,6 +28,7 @@ registry.registerPath({
   summary: "List my bookings",
   description: "Returns all bookings of the authenticated user, newest first, including cancelled ones. Each booking includes the event's title, start and end time, and status. `activeTicketsCount` is the number of tickets that are not cancelled (valid or used). `cancelledTicketsCount` is the number of cancelled tickets. For a cancelled booking, `cancelledTicketsCount` is the number of tickets it held. Requires authentication.",
   security: [{ [bearerAuth.name]: [] }],
+  request: { query: ListBookingsQuerySchema },
   responses: {
     200: jsonResponse("List of your bookings", UserBookingsSuccess),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),

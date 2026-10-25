@@ -118,3 +118,12 @@ export const PatchTicketCountSchema = z.object({
 });
 
 export type PatchTicketCountInput = z.infer<typeof PatchTicketCountSchema>;
+
+export const ListBookingsQuerySchema = z.object({
+  status: z.enum(BookingStatus).optional().meta({
+    description: "Only return bookings with this status",
+    example: "CONFIRMED",
+  }),
+});
+
+export type ListBookingsQuery = z.infer<typeof ListBookingsQuerySchema>;

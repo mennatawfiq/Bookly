@@ -63,3 +63,12 @@ export const CheckInSchema = z.object({
   code: z.base64url()
 });
 export type CheckInInfo = z.infer<typeof CheckInSchema>;
+
+export const ListEventsQuerySchema = z.object({
+  status: z.enum(EventStatus).optional().meta({
+    description: "Only return events with this status",
+    example: "PUBLISHED",
+  }),
+});
+
+export type ListEventsQuery = z.infer<typeof ListEventsQuerySchema>;

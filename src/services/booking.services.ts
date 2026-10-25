@@ -5,9 +5,10 @@ import prisma from "../lib/prisma";
 import { CreateBookingInput, PatchTicketCountInput } from "../schemas/booking.schema";
 import crypto from "node:crypto";
 
-export async function getAllBookingsService() {
+export async function getAllBookingsService(status?: BookingStatus) {
 
   const bookings = await prisma.booking.findMany({
+    where: status ? { status } : {},
     select: {
       id: true, userId: true, eventId: true, status: true, createdAt: true,
       user: {
@@ -27,10 +28,10 @@ export async function getAllBookingsService() {
 
 };
 
-export async function getMyBookingsService(userId: string) {
+export async function getMyBookingsService(userId: string, status?: BookingStatus) {
 
   const bookings = await prisma.booking.findMany({
-    where: { userId },
+    where: status ? { userId, status } : { userId },
     select: {
       id: true, eventId: true, status: true, createdAt: true, cancelledAt: true,
       event: {

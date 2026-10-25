@@ -22,10 +22,22 @@ const eventSummarySelect = {
 
 const ticketTypeSummarySelect = { id: true, type: true, capacity: true, remaining: true } as const;
 
-export async function getEventsService() {
+export async function getEventsService(user?: AuthenticatedUser, status: EventStatus = "PUBLISHED") {
+
+  let where: Prisma.EventWhereInput;
+
+  if (status === "PUBLISHED") {
+    where = { status };
+  } else if (!user) {
+    throw new AppError(401, "Authentication required to filter by this status");
+  } else if (user.role === "ADMIN") {
+    where = { status };
+  } else {
+    where = { status, organizerId: user.id };
+  }
 
   const events = await prisma.event.findMany({
-    where: { status: "PUBLISHED" },
+    where,
     select: {
       id: true,
       organizerId: true,
@@ -44,10 +56,10 @@ export async function getEventsService() {
 
 };
 
-export async function getMyEventsService(userId: string) {
+export async function getMyEventsService(userId: string, status?: EventStatus) {
 
   const events = await prisma.event.findMany({
-    where: { organizerId: userId },
+    where: status ? { organizerId: userId, status } : { organizerId: userId },
     orderBy: {
       startsAt: "asc"
     }
@@ -388,11 +400,10 @@ export async function deleteTicketTypeService(eventId: string, ticketTypeId: str
 
 };
 
-export async function getEventBookingsService(eventId: string) {
+export async function getEventBookingsService(eventId: string, status?: BookingStatus) {
 
   const bookings = await prisma.booking.findMany({
-    where: { eventId },
-    select: {
+    where: status ? { eventId, status } : { eventId }, select: {
       id: true, status: true, createdAt: true, cancelledAt: true,
       user: { select: { name: true, email: true } },
       tickets: { select: { status: true } }

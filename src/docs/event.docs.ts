@@ -4,18 +4,21 @@ import { jsonResponse } from "./helpers";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
 import { TicketTypeIdParamSchema } from "../schemas/ticketType.schema";
 import { AllEventsSuccess, CreateEventRequest, EventBookingsSuccess, EventCreatedSuccess, EventIdParamSchema, EventSuccess, OwnEventsSuccess, PatchTicketTypeRequest, PostTicketTypeRequest, TicketCheckInRequest, TicketCheckInSuccess, TicketTypeSuccess, UpdateEventRequest } from "./components";
-import { eventIdParamSchema } from "../schemas/event.schema";
+import { ListEventsQuerySchema } from "../schemas/event.schema";
+import { ListBookingsQuerySchema } from "../schemas/booking.schema";
 
 registry.registerPath({
   method: "get",
   path: "/events",
   tags: ["Events"],
-  summary: "List published events",
-  description: "List all Bookly's published events.",
-  // request: { // later: pagination and limiting
-  // },
+  summary: "List events",
+  description: "Without status, returns published events. With status of `DRAFT` or `CANCELLED`, returns only your own events with that status (admins see all). Requires authentication for those.",
+  security: [{}, { [bearerAuth.name]: [] }],
+  request: { query: ListEventsQuerySchema },
   responses: {
     200: jsonResponse("List of published events", AllEventsSuccess),
+    400: jsonResponse("Invalid status", ValidationFailResponse),
+    401: jsonResponse("Unauthenticated user", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
 });
@@ -27,8 +30,7 @@ registry.registerPath({
   summary: "List all owned events",
   description: "Returns all events created by the authenticated organizer, in any status (draft, published, cancelled). Requires the ORGANIZER or ADMIN role.",
   security: [{ [bearerAuth.name]: [] }],
-  // request: { // later: pagination and limiting
-  // },
+  request: { query: ListEventsQuerySchema },
   responses: {
     200: jsonResponse("List of all organizer's events", OwnEventsSuccess),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
@@ -200,7 +202,7 @@ registry.registerPath({
   summary: "List bookings of an event",
   description: "Returns all bookings of an event, newest first, including cancelled ones. Each booking includes the name and email of the user who booked, its status, and ticket counts. `activeTicketsCount` is the number of tickets that are not cancelled (valid or used). `cancelledTicketsCount` is the number of cancelled tickets. Allowed for the event’s organizer and for admins. Requires the `ORGANIZER` or `ADMIN` role.",
   security: [{ [bearerAuth.name]: [] }],
-  request: { params: EventIdParamSchema },
+  request: { params: EventIdParamSchema, query: ListBookingsQuerySchema },
   responses: {
     200: jsonResponse("List of the event’s bookings", EventBookingsSuccess),
     400: jsonResponse("Validation failed", ValidationFailResponse),

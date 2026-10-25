@@ -10,7 +10,7 @@ import { CreateBookingSchema } from "../schemas/booking.schema";
 
 const router = Router();
 
-router.get("/", asyncHandler(getEvents));
+router.get("/", optionalAuthenticate, asyncHandler(getEvents));
 
 router.get("/mine", authenticate, authorize('ORGANIZER'), asyncHandler(getMyEvents));
 
