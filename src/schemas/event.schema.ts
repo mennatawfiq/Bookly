@@ -22,7 +22,7 @@ export const EventSchema = z.object({
   endsAt: z.iso.datetime({ offset: true }).meta({ example: "2027-09-20T21:00:00.000Z" }),
   status: z.enum(EventStatus).meta({ example: "PUBLISHED" }),
   createdAt: z.iso.datetime().meta({ example: "2026-10-05T10:00:00.000Z" }),
-  updatedAt: z.iso.datetime().meta({ example: "2026-10-05T10:00:00.000Z" }),
+  updatedAt: z.iso.datetime().nullable().meta({ example: "2026-10-05T10:00:00.000Z" }),
 });
 
 export const EventInputSchema = z.object({

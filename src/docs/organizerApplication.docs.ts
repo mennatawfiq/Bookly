@@ -22,7 +22,7 @@ registry.registerPath({
     400: jsonResponse("Validation failed", ValidationFailResponse),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     403: jsonResponse("Not a USER", MessageFailResponse),
-    409: jsonResponse("pending application exists, or the cooldown has not passed", MessageFailResponse),
+    409: jsonResponse("Pending application exists, or the cooldown has not passed", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
 });
@@ -97,8 +97,7 @@ registry.registerPath({
     400: jsonResponse("Validation failed", ValidationFailResponse),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     403: jsonResponse("Not an ADMIN", MessageFailResponse),
-    404: jsonResponse("Application not found", MessageFailResponse),
-    409: jsonResponse("The application is not `PENDING`, or the applicant's account was deleted", MessageFailResponse),
+    404: jsonResponse("Application not found, or the applicant's account was deleted", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   },
 });

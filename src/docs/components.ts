@@ -29,7 +29,7 @@ export const EventCreatedSuccess = registry.register("EventCreatedSuccess", jsen
 export const UpdateEventRequest = registry.register("UpdateEventRequest", PatchEventSchema);
 
 export const PostTicketTypeRequest = registry.register("PostTicketTypeRequest", CreateTicketTypeSchema);
-export const TicketTypeSuccess = registry.register("TicketTypeSuccess", TicketTypeSummarySchema);
+export const TicketTypeSuccess = registry.register("TicketTypeSuccess", jsendSuccess(z.object({ ticketType: TicketTypeSummarySchema })));
 
 export const PatchTicketTypeRequest = registry.register("PatchTicketTypeRequest", PatchTicketTypeSchema);
 
@@ -84,8 +84,7 @@ export const UserSummary = registry.register("UserSummary", UserSchema.omit({ cr
 export const RegisterRequest = registry.register("RegisterRequest", registerSchema);
 export const RegisterSuccess = registry.register("RegisterSuccess", jsendSuccess(z.object({ user: User })));
 
-export const UserProfile = registry.register("UserProfile", UserSchema);
-export const MeSuccess = registry.register("MeSuccess", jsendSuccess(z.object({ user: UserProfile })));
+export const MeSuccess = registry.register("MeSuccess", jsendSuccess(z.object({ user: User })));
 
 export const AdminUserItem = registry.register("AdminUserItem", AdminUserItemSchema);
 export const AllUsersSuccess = registry.register("AllUsersSuccess", jsendSuccess(z.object({ users: z.array(AdminUserItem) })));

@@ -28,6 +28,7 @@ export async function getEventsService() {
     where: { status: "PUBLISHED" },
     select: {
       id: true,
+      organizerId: true,
       title: true,
       description: true,
       startsAt: true,
@@ -78,6 +79,7 @@ export async function getEventService(eventId: string, user?: AuthenticatedUser)
       endsAt: true,
       status: true,
       createdAt: true,
+      updatedAt: true,
       ticketTypes: {
         select: ticketTypeSummarySelect,
       }

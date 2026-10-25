@@ -89,7 +89,7 @@ registry.registerPath({
     400: jsonResponse("Validation failed, or the event doesn't have one of the requested ticket types", z.union([ValidationFailResponse, MessageFailResponse])),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     404: jsonResponse("Event not found", MessageFailResponse),
-    409: jsonResponse("Not a published event or event has already started or the user already have a `CONFIRMED` booking for this event or a requested type doesn't have enough remaining tickets", MessageFailResponse),
+    409: jsonResponse("Not a published event or event already has started or the user already have a `CONFIRMED` booking for this event or a requested type doesn't have enough remaining tickets", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
 });
@@ -149,7 +149,7 @@ registry.registerPath({
     400: jsonResponse("Validation failed, the event doesn't have one of the requested ticket types, or the booking would exceed 10 tickets", z.union([ValidationFailResponse, MessageFailResponse])),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     404: jsonResponse("Booking not found, or you are not allowed to see it", MessageFailResponse),
-    409: jsonResponse("the event is not published or has already started, the booking is already cancelled, a requested total is lower than the tickets already held (use cancel-ticket), a requested type doesn’t have enough remaining tickets", MessageFailResponse),
+    409: jsonResponse("The event is not published or has already started, the booking is already cancelled, a requested total is lower than the tickets already held (use cancel-ticket), a requested type doesn’t have enough remaining tickets", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
 });
