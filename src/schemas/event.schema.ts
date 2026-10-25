@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { EventStatus } from "../../prisma/generated/enums";
+import { OffsetPaginationQuerySchema } from "./pagination.schema";
 
 export const eventIdParamSchema = z.object({
   eventId: z.uuid().meta({
@@ -22,7 +23,7 @@ export const EventSchema = z.object({
   endsAt: z.iso.datetime({ offset: true }).meta({ example: "2027-09-20T21:00:00.000Z" }),
   status: z.enum(EventStatus).meta({ example: "PUBLISHED" }),
   createdAt: z.iso.datetime().meta({ example: "2026-10-05T10:00:00.000Z" }),
-  updatedAt: z.iso.datetime().meta({ example: "2026-10-05T10:00:00.000Z" }),
+  updatedAt: z.iso.datetime().nullable().meta({ example: "2026-10-05T10:00:00.000Z" }),
 });
 
 export const EventInputSchema = z.object({
@@ -63,3 +64,12 @@ export const CheckInSchema = z.object({
   code: z.base64url()
 });
 export type CheckInInfo = z.infer<typeof CheckInSchema>;
+
+export const ListEventsQuerySchema = OffsetPaginationQuerySchema.extend({
+  status: z.enum(EventStatus).optional().meta({
+    description: "Only return events with this status",
+    example: "PUBLISHED",
+  }),
+});
+
+export type ListEventsQuery = z.infer<typeof ListEventsQuerySchema>;

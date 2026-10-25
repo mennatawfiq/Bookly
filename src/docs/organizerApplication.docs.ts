@@ -22,7 +22,7 @@ registry.registerPath({
     400: jsonResponse("Validation failed", ValidationFailResponse),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     403: jsonResponse("Not a USER", MessageFailResponse),
-    409: jsonResponse("pending application exists, or the cooldown has not passed", MessageFailResponse),
+    409: jsonResponse("Pending application exists, or the cooldown has not passed", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
 });
@@ -32,10 +32,9 @@ registry.registerPath({
   path: "/organizer-applications/mine",
   tags: ["Organizer Applications"],
   summary: "List my applications",
-  description: "Returns all organizer applications of the authenticated user, newest first, including approved and rejected ones. `reviewNote` is the admin's reason, and it is `null` until the application is reviewed. Requires authentication.",
+  description: "Returns all organizer applications of the authenticated user, newest first, including approved and rejected ones. `reviewNote` is the admin's reason, and it is `null` until the application is reviewed. Requires authentication. A page after the last one returns an empty list.",
   security: [{ [bearerAuth.name]: [] }],
-  // request: { // later: pagination and limiting
-  // },
+  request: { query: ListApplicationsQuerySchema },
   responses: {
     200: jsonResponse("List of your applications", MyApplicationsSuccess),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
@@ -65,10 +64,9 @@ registry.registerPath({
   path: "/organizer-applications",
   tags: ["Organizer Applications"],
   summary: "List all applications",
-  description: "Returns all organizer applications, newest first, with the name and email of the applicant. Use `status` to return only `PENDING`, `APPROVED` or `REJECTED` applications. Requires the ADMIN role.",
+  description: "Returns all organizer applications, newest first, with the name and email of the applicant. Use `status` to return only `PENDING`, `APPROVED` or `REJECTED` applications. Requires the ADMIN role. A page after the last one returns an empty list.",
   security: [{ [bearerAuth.name]: [] }],
   request: { query: ListApplicationsQuerySchema },
-  // later: pagination and limiting
   responses: {
     200: jsonResponse("List of applications", AllApplicationsSuccess),
     400: jsonResponse("Invalid status value", ValidationFailResponse),
@@ -97,8 +95,7 @@ registry.registerPath({
     400: jsonResponse("Validation failed", ValidationFailResponse),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     403: jsonResponse("Not an ADMIN", MessageFailResponse),
-    404: jsonResponse("Application not found", MessageFailResponse),
-    409: jsonResponse("The application is not `PENDING`, or the applicant's account was deleted", MessageFailResponse),
+    404: jsonResponse("Application not found, or the applicant's account was deleted", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   },
 });

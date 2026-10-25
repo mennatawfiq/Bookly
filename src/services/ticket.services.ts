@@ -16,8 +16,6 @@ export async function getTicketsService(bookingId: string) {
     orderBy: { createdAt: "asc" }
   });
 
-  tickets.map(({ ticketType, ...t }) => ({ ...t, type: ticketType.type }));
-
-  return tickets;
+  return tickets.map(({ ticketType, ...t }) => ({ ...t, type: ticketType.type }));;
 
 };

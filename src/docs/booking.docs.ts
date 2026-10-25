@@ -3,16 +3,15 @@ import { bearerAuth, registry } from "./registry";
 import { jsonResponse } from "./helpers";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
 import { AllBookingsSuccess, BookingIdParamSchema, BookingTicketsDetailSuccess, CreateBookingRequest, EventIdParamSchema, PatchTicketCountRequest, UserBookingDetailSuccess, UserBookingsSuccess } from "./components";
-import { CancelTicketParamSchema } from "../schemas/booking.schema";
+import { CancelTicketParamSchema, ListBookingsQuerySchema } from "../schemas/booking.schema";
 
 registry.registerPath({
   method: "get",
   path: "/bookings",
   tags: ["Bookings"],
   summary: "List all bookings",
-  description: "Returns every booking on the platform, newest first, with the user's name and email and the event's title and start time. Requires the ADMIN role.",
-  // request: { // later: pagination and limiting
-  // },
+  description: "Returns every booking on the platform, newest first, with the user's name and email and the event's title and start time. Requires the ADMIN role. A page after the last one returns an empty list.",
+  request: { query: ListBookingsQuerySchema },
   security: [{ [bearerAuth.name]: [] }],
   responses: {
     200: jsonResponse("List of all bookings", AllBookingsSuccess),
@@ -27,8 +26,9 @@ registry.registerPath({
   path: "/bookings/mine",
   tags: ["Bookings"],
   summary: "List my bookings",
-  description: "Returns all bookings of the authenticated user, newest first, including cancelled ones. Each booking includes the event's title, start and end time, and status. `activeTicketsCount` is the number of tickets that are not cancelled (valid or used). `cancelledTicketsCount` is the number of cancelled tickets. For a cancelled booking, `cancelledTicketsCount` is the number of tickets it held. Requires authentication.",
+  description: "Returns all bookings of the authenticated user, newest first, including cancelled ones. Each booking includes the event's title, start and end time, and status. `activeTicketsCount` is the number of tickets that are not cancelled (valid or used). `cancelledTicketsCount` is the number of cancelled tickets. For a cancelled booking, `cancelledTicketsCount` is the number of tickets it held. Requires authentication. A page after the last one returns an empty list.",
   security: [{ [bearerAuth.name]: [] }],
+  request: { query: ListBookingsQuerySchema },
   responses: {
     200: jsonResponse("List of your bookings", UserBookingsSuccess),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
@@ -89,7 +89,7 @@ registry.registerPath({
     400: jsonResponse("Validation failed, or the event doesn't have one of the requested ticket types", z.union([ValidationFailResponse, MessageFailResponse])),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     404: jsonResponse("Event not found", MessageFailResponse),
-    409: jsonResponse("Not a published event or event has already started or the user already have a `CONFIRMED` booking for this event or a requested type doesn't have enough remaining tickets", MessageFailResponse),
+    409: jsonResponse("Not a published event or event already has started or the user already have a `CONFIRMED` booking for this event or a requested type doesn't have enough remaining tickets", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
 });
@@ -149,7 +149,7 @@ registry.registerPath({
     400: jsonResponse("Validation failed, the event doesn't have one of the requested ticket types, or the booking would exceed 10 tickets", z.union([ValidationFailResponse, MessageFailResponse])),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     404: jsonResponse("Booking not found, or you are not allowed to see it", MessageFailResponse),
-    409: jsonResponse("the event is not published or has already started, the booking is already cancelled, a requested total is lower than the tickets already held (use cancel-ticket), a requested type doesn’t have enough remaining tickets", MessageFailResponse),
+    409: jsonResponse("The event is not published or has already started, the booking is already cancelled, a requested total is lower than the tickets already held (use cancel-ticket), a requested type doesn’t have enough remaining tickets", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
 });

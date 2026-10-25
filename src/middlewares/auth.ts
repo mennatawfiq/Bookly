@@ -107,11 +107,11 @@ export const requireOwnership = <T extends Record<string, unknown>>(config: Requ
     }
 
     if (config.alsoAllow && await config.alsoAllow(resource, user)) {
-      next();
+      return next();
     }
 
     if (resource[config.ownerField] === req.user?.id) {
-      next();
+      return next();
     }
 
     throw new AppError(404, `${config.resourceName} not found`);

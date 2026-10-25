@@ -4,53 +4,65 @@ import { AppError } from "../errorhandling/appError";
 import prisma from "../lib/prisma";
 import { CreateBookingInput, PatchTicketCountInput } from "../schemas/booking.schema";
 import crypto from "node:crypto";
+import { buildPagination } from "../utils/pagination.util";
 
-export async function getAllBookingsService() {
+export async function getAllBookingsService(page: number, limit: number, status?: BookingStatus) {
 
-  const bookings = await prisma.booking.findMany({
-    select: {
-      id: true, userId: true, eventId: true, status: true, createdAt: true,
-      user: {
-        select: {
-          name: true, email: true
-        }
+  const where = status ? { status } : {};
+
+  const [bookings, totalItems] = await prisma.$transaction([
+    prisma.booking.findMany({
+      where,
+      select: {
+        id: true, userId: true, eventId: true, status: true, createdAt: true,
+        user: { select: { name: true, email: true } },
+        event: { select: { title: true, startsAt: true } }
       },
-      event: {
-        select: { title: true, startsAt: true }
-      }
-    },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.booking.count({ where }),
+  ]);
 
-    orderBy: { createdAt: "desc" }
-  });
-
-  return bookings;
+  return {
+    bookings,
+    pagination: buildPagination(page, limit, totalItems)
+  };
 
 };
 
-export async function getMyBookingsService(userId: string) {
+export async function getMyBookingsService(userId: string, page: number, limit: number, status?: BookingStatus) {
 
-  const bookings = await prisma.booking.findMany({
-    where: { userId },
-    select: {
-      id: true, eventId: true, status: true, createdAt: true, cancelledAt: true,
-      event: {
-        select: { title: true, startsAt: true, endsAt: true, status: true }
+  const where = status ? { userId, status } : { userId };
+
+  const [bookings, totalItems] = await prisma.$transaction([
+    prisma.booking.findMany({
+      where,
+      select: {
+        id: true, eventId: true, status: true, createdAt: true, cancelledAt: true,
+        event: { select: { title: true, startsAt: true, endsAt: true, status: true } },
+        tickets: { select: { status: true } }
       },
-      tickets: { select: { status: true } }
-    },
-    orderBy: { createdAt: "desc" }
-  });
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.booking.count({ where }),
+  ]);
 
+  return {
+    bookings: bookings.map(({ tickets, ...booking }) => {
+      const cancelledTicketsCount = tickets.filter((t) => t.status === "CANCELLED").length;
+      const activeTicketsCount = tickets.length - cancelledTicketsCount;
 
-  return bookings.map(({ tickets, ...booking }) => {
-    const cancelledTicketsCount = tickets.filter((t) => t.status === "CANCELLED").length;
-    const activeTicketsCount = tickets.length - cancelledTicketsCount;
-
-    return {
-      ...booking,
-      activeTicketsCount, cancelledTicketsCount
-    }
-  });
+      return {
+        ...booking,
+        activeTicketsCount, cancelledTicketsCount
+      }
+    }),
+    pagination: buildPagination(page, limit, totalItems)
+  };
 
 };
 
@@ -86,7 +98,7 @@ export async function getBookingService(bookingId: string) {
   const { tickets, ...rest } = booking;
 
   return {
-    rest,
+    ...rest,
     activeTicketsCount: tickets.length - cancelledTicketsCount,
     cancelledTicketsCount,
     activeTicketsByType: [...activeByType].map(([type, count]) => ({ type, count })),
@@ -209,7 +221,7 @@ export async function cancelBookingsInTx(tx: Prisma.TransactionClient, bookingId
   await tx.$queryRaw`SELECT id FROM "TicketType" WHERE id IN (${Prisma.join(typeIds)}) ORDER BY id FOR UPDATE`;
 
   await tx.ticket.updateMany({
-    where: { id: { in: tickets.map((t) => t.id) } },
+    where: { id: { in: tickets.map((t) => t.id) }, status: "VALID" },
     data: { status: "CANCELLED", cancelledAt },
   });
 
@@ -421,10 +433,7 @@ export async function patchTicketCountService(bookingId: string, ticketCountInfo
         existingTicketTypes.set(t.type, { id: t.id, remaining: t.remaining });
       }
 
-      let total = ticketRows.length + ticketCountInfo.tickets.reduce((sum, c) => sum + c.count, 0);
-      if (total > 10) {
-        throw new AppError(400, `A booking can have at most 10 tickets`);
-      }
+      let total = ticketRows.length;
 
       const deltas: { id: string; diff: number }[] = [];
 
@@ -442,6 +451,11 @@ export async function patchTicketCountService(bookingId: string, ticketCountInfo
           continue;
         }
         deltas.push({ id: existingType.id, diff });
+        total += diff;
+      }
+
+      if (total > 10) {
+        throw new AppError(400, `A booking can have at most 10 tickets`);
       }
 
       if (deltas.length === 0) {

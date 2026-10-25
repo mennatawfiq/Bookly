@@ -2,10 +2,14 @@ import { Request, Response } from "express";
 import { getEventsService, getEventService, getMyEventsService, postEventService, patchEventService, publishEventService, postTicketTypeService, patchTicketTypeService, deleteTicketTypeService, getEventBookingsService, cancelEventService, checkInService } from "../services/event.services";
 import { AppError } from "../errorhandling/appError";
 import { postBookingService } from "../services/booking.services";
+import { ListBookingsQuerySchema } from "../schemas/booking.schema";
+import { ListEventsQuerySchema } from "../schemas/event.schema";
 
 export const getEvents = async (req: Request, res: Response) => {
 
-  const events = await getEventsService();
+  const { status, page, limit } = ListEventsQuerySchema.parse(req.query);
+
+  const events = await getEventsService(page, limit, req.user, status);
 
   res.jsend.success({ events }, 200);
 
@@ -19,7 +23,9 @@ export const getMyEvents = async (req: Request, res: Response) => {
     throw new AppError(400, "Invalid userId");
   }
 
-  const events = await getMyEventsService(userId);
+  const { status, page, limit } = ListEventsQuerySchema.parse(req.query);
+
+  const events = await getMyEventsService(page, limit, userId, status);
 
   res.jsend.success({ events }, 200);
 
@@ -148,7 +154,7 @@ export const deleteTicketType = async (req: Request, res: Response) => {
 
   await deleteTicketTypeService(eventId, ticketTypeId);
 
-  res.jsend.success(null, 204);
+  res.status(204).send();
 
 };
 
@@ -160,7 +166,9 @@ export const getEventBookings = async (req: Request, res: Response) => {
     throw new AppError(400, "Invalid eventId");
   }
 
-  const bookings = await getEventBookingsService(eventId);
+  const { status, page, limit } = ListBookingsQuerySchema.parse(req.query);
+
+  const bookings = await getEventBookingsService(eventId, page, limit, status);
 
   res.jsend.success({ bookings }, 200);
 

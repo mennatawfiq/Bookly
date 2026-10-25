@@ -5,6 +5,8 @@ import prisma from "../lib/prisma";
 import { CheckInInfo, CreateEventInput, PatchEventInput } from "../schemas/event.schema";
 import { CreateTicketTypeInput, PatchTicketTypeInput } from "../schemas/ticketType.schema";
 import { AuthenticatedUser } from "../types/auth";
+import { buildPagination } from "../utils/pagination.util";
+import { cancelBookingsInTx } from "./booking.services";
 
 
 const eventSummarySelect = {
@@ -21,37 +23,50 @@ const eventSummarySelect = {
 
 const ticketTypeSummarySelect = { id: true, type: true, capacity: true, remaining: true } as const;
 
-export async function getEventsService() {
+export async function getEventsService(page: number, limit: number, user?: AuthenticatedUser, status: EventStatus = "PUBLISHED") {
 
-  const events = await prisma.event.findMany({
-    where: { status: "PUBLISHED" },
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      startsAt: true,
-      endsAt: true,
-      location: true,
-    },
-    orderBy: {
-      startsAt: "asc"
-    }
-  });
+  let where: Prisma.EventWhereInput;
 
-  return events;
+  if (status === "PUBLISHED") {
+    where = { status };
+  } else if (!user) {
+    throw new AppError(401, "Authentication required to filter by this status");
+  } else if (user.role === "ADMIN") {
+    where = { status };
+  } else {
+    where = { status, organizerId: user.id };
+  }
+
+  const [events, totalItems] = await prisma.$transaction([
+    prisma.event.findMany({
+      where,
+      select: { id: true, organizerId: true, title: true, description: true, startsAt: true, endsAt: true, location: true, },
+      orderBy: [{ startsAt: "desc" }, { id: "desc" }],
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.event.count({ where }),
+  ]);
+
+  return { events, pagination: buildPagination(page, limit, totalItems) };
 
 };
 
-export async function getMyEventsService(userId: string) {
+export async function getMyEventsService(page: number, limit: number, userId: string, status?: EventStatus) {
 
-  const events = await prisma.event.findMany({
-    where: { organizerId: userId },
-    orderBy: {
-      startsAt: "asc"
-    }
-  });
+  const where = status ? { organizerId: userId, status } : { organizerId: userId };
 
-  return events;
+  const [events, totalItems] = await prisma.$transaction([
+    prisma.event.findMany({
+      where,
+      orderBy: [{ startsAt: "asc" }, { id: "desc" }],
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.event.count({ where }),
+  ]);
+
+  return { events, pagination: buildPagination(page, limit, totalItems) };
 
 }
 
@@ -77,6 +92,7 @@ export async function getEventService(eventId: string, user?: AuthenticatedUser)
       endsAt: true,
       status: true,
       createdAt: true,
+      updatedAt: true,
       ticketTypes: {
         select: ticketTypeSummarySelect,
       }
@@ -120,7 +136,7 @@ export async function patchEventService(eventId: string, eventInfo: PatchEventIn
   }
 
   if (existingEvent.status !== "DRAFT") {
-    throw new AppError(400, "Event cannot be edited");
+    throw new AppError(409, "Event cannot be edited");
   }
 
   const startsAt = eventInfo.startsAt ? new Date(eventInfo.startsAt) : existingEvent.startsAt;
@@ -214,29 +230,22 @@ export async function cancelEventService(eventId: string) {
         throw new AppError(409, "Event already started");
       }
 
-      const bookingRows = await tx.$queryRaw<{ id: string }[]>
-        `SELECT id FROM "Booking" WHERE "eventId" = ${eventId} AND status = 'CONFIRMED' FOR UPDATE`;
+      if (event.status === "PUBLISHED") {
 
-      const bookingIds = bookingRows.map((b) => b.id);
+        const bookingRows = await tx.$queryRaw<{ id: string }[]>
+          `SELECT id FROM "Booking" WHERE "eventId" = ${eventId} AND status = 'CONFIRMED' FOR UPDATE`;
 
-      if (bookingIds.length === 0) {
-        return;
+        const bookingIds = bookingRows.map((b) => b.id);
+
+        if (bookingIds.length === 0) {
+          return;
+        }
+
+        const cancelledAt = new Date();
+
+        await cancelBookingsInTx(tx, bookingIds, cancelledAt); // cancels bookings and tickets 
+
       }
-
-      await tx.$queryRaw`SELECT id FROM "Ticket" WHERE "bookingId" IN (${Prisma.join(bookingIds)}) AND status = 'VALID'
-            ORDER BY id FOR UPDATE`;
-
-      const cancelledAt = new Date();
-
-      await tx.ticket.updateMany({
-        where: { bookingId: { in: bookingIds }, status: "VALID" },
-        data: { status: "CANCELLED", cancelledAt, }
-      });
-
-      await tx.booking.updateMany({
-        where: { eventId, status: "CONFIRMED" },
-        data: { status: "CANCELLED", cancelledAt }
-      });
 
       await tx.event.update({
         where: { id: eventId },
@@ -392,27 +401,37 @@ export async function deleteTicketTypeService(eventId: string, ticketTypeId: str
 
 };
 
-export async function getEventBookingsService(eventId: string) {
+export async function getEventBookingsService(eventId: string, page: number, limit: number, status?: BookingStatus) {
 
-  const bookings = await prisma.booking.findMany({
-    where: { eventId },
-    select: {
-      id: true, status: true, createdAt: true, cancelledAt: true,
-      user: { select: { name: true, email: true } },
-      tickets: { select: { status: true } }
-    },
-    orderBy: { createdAt: "desc" }
-  });
+  const where = status ? { eventId, status } : { eventId };
 
-  return bookings.map(({ tickets, ...booking }) => {
-    const cancelledTicketsCount = tickets.filter((t) => t.status === "CANCELLED").length;
-    const activeTicketsCount = tickets.length - cancelledTicketsCount;
+  const [bookings, totalItems] = await prisma.$transaction([
+    prisma.booking.findMany({
+      where,
+      select: {
+        id: true, status: true, createdAt: true, cancelledAt: true,
+        user: { select: { name: true, email: true } },
+        tickets: { select: { status: true } }
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.booking.count({ where }),
+  ]);
 
-    return {
-      ...booking,
-      activeTicketsCount, cancelledTicketsCount
-    }
-  });
+  return {
+    bookings: bookings.map(({ tickets, ...booking }) => {
+      const cancelledTicketsCount = tickets.filter((t) => t.status === "CANCELLED").length;
+      const activeTicketsCount = tickets.length - cancelledTicketsCount;
+
+      return {
+        ...booking,
+        activeTicketsCount, cancelledTicketsCount
+      }
+    }),
+    pagination: buildPagination(page, limit, totalItems)
+  };
 
 };
 

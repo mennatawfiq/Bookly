@@ -2,10 +2,14 @@ import { Request, Response } from "express";
 import { cancelBookingService, cancelTicketService, getAllBookingsService, getBookingService, getMyBookingsService, patchTicketCountService } from "../services/booking.services";
 import { AppError } from "../errorhandling/appError";
 import { getTicketsService } from "../services/ticket.services";
+import { ListBookingsQuerySchema } from "../schemas/booking.schema";
+import { OffsetPaginationQuerySchema } from "../schemas/pagination.schema";
 
 export const getAllBookings = async (req: Request, res: Response) => {
 
-  const bookings = await getAllBookingsService();
+  const { status, page, limit } = ListBookingsQuerySchema.parse(req.query);
+
+  const bookings = await getAllBookingsService(page, limit, status);
 
   res.jsend.success({ bookings }, 200);
 
@@ -13,13 +17,15 @@ export const getAllBookings = async (req: Request, res: Response) => {
 
 export const getMyBookings = async (req: Request, res: Response) => {
 
+  const { status, page, limit } = ListBookingsQuerySchema.parse(req.query);
+
   const userId = req.user?.id;
 
   if (typeof userId !== "string") {
     throw new AppError(400, "Invalid userId");
   }
 
-  const bookings = await getMyBookingsService(userId);
+  const bookings = await getMyBookingsService(userId, page, limit, status);
 
   res.jsend.success({ bookings }, 200);
 
