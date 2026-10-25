@@ -2,6 +2,7 @@ import { Prisma } from "../../prisma/generated/client";
 import { UserRole } from "../../prisma/generated/enums";
 import { AppError } from "../errorhandling/appError";
 import prisma from "../lib/prisma";
+import { buildPagination } from "../utils/pagination.util";
 import { cancelBookingsInTx } from "./booking.services";
 import crypto from "node:crypto";
 
@@ -20,13 +21,22 @@ export async function getMeService(userId: string) {
 
 };
 
-export async function getUsersService(role?: UserRole) {
+export async function getUsersService(page: number, limit: number, role?: UserRole) {
 
-  return await prisma.user.findMany({
-    where: role ? { role } : {},
-    select: { id: true, name: true, email: true, role: true, createdAt: true, deletedAt: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const where = role ? { role } : {};
+
+  const [users, totalItems] = await prisma.$transaction([
+    prisma.user.findMany({
+      where,
+      select: { id: true, name: true, email: true, role: true, createdAt: true, deletedAt: true },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.user.count({ where }),
+  ]);
+
+  return { users, pagination: buildPagination(page, limit, totalItems) };
 
 };
 

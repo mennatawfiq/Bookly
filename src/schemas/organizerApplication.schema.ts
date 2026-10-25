@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ApplicationStatus } from "../../prisma/generated/enums";
+import { OffsetPaginationQuerySchema } from "./pagination.schema";
 
 export const CreateApplicationSchema = z.object({
   organizationName: z.string().trim().min(2).max(100).meta({ example: "Cairo Live Events" }),
@@ -28,7 +29,7 @@ export const applicationIdParamSchema = z.object({
   }),
 });
 
-export const ListApplicationsQuerySchema = z.object({
+export const ListApplicationsQuerySchema = OffsetPaginationQuerySchema.extend({
   status: z.enum(ApplicationStatus).optional().meta({
     description: "Only return applications with this status",
     example: "PENDING",

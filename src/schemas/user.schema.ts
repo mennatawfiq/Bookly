@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { UserRole } from "../../prisma/generated/enums";
+import { OffsetPaginationQuerySchema } from "./pagination.schema";
 
 export const UserSchema = z.object({
   id: z.uuid().meta({ example: "7b0f6c1e-3d2a-4a57-9c1e-2f4a8e6d1b90" }),
@@ -13,7 +14,7 @@ export const AdminUserItemSchema = UserSchema.extend({
   deletedAt: z.iso.datetime().nullable().meta({ example: null }),
 });
 
-export const ListUsersQuerySchema = z.object({
+export const ListUsersQuerySchema = OffsetPaginationQuerySchema.extend({
   role: z.enum(UserRole).optional().meta({
     description: "Only return users with this role",
     example: "ORGANIZER",

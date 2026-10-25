@@ -7,9 +7,9 @@ import { ListEventsQuerySchema } from "../schemas/event.schema";
 
 export const getEvents = async (req: Request, res: Response) => {
 
-  const { status } = ListEventsQuerySchema.parse(req.query);
+  const { status, page, limit } = ListEventsQuerySchema.parse(req.query);
 
-  const events = await getEventsService(req.user, status);
+  const events = await getEventsService(page, limit, req.user, status);
 
   res.jsend.success({ events }, 200);
 
@@ -23,9 +23,9 @@ export const getMyEvents = async (req: Request, res: Response) => {
     throw new AppError(400, "Invalid userId");
   }
 
-  const { status } = ListEventsQuerySchema.parse(req.query);
+  const { status, page, limit } = ListEventsQuerySchema.parse(req.query);
 
-  const events = await getMyEventsService(userId, status);
+  const events = await getMyEventsService(page, limit, userId, status);
 
   res.jsend.success({ events }, 200);
 
@@ -166,9 +166,9 @@ export const getEventBookings = async (req: Request, res: Response) => {
     throw new AppError(400, "Invalid eventId");
   }
 
-  const { status } = ListBookingsQuerySchema.parse(req.query);
+  const { status, page, limit } = ListBookingsQuerySchema.parse(req.query);
 
-  const bookings = await getEventBookingsService(eventId, status);
+  const bookings = await getEventBookingsService(eventId, page, limit, status);
 
   res.jsend.success({ bookings }, 200);
 

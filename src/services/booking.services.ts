@@ -4,54 +4,65 @@ import { AppError } from "../errorhandling/appError";
 import prisma from "../lib/prisma";
 import { CreateBookingInput, PatchTicketCountInput } from "../schemas/booking.schema";
 import crypto from "node:crypto";
+import { buildPagination } from "../utils/pagination.util";
 
-export async function getAllBookingsService(status?: BookingStatus) {
+export async function getAllBookingsService(page: number, limit: number, status?: BookingStatus) {
 
-  const bookings = await prisma.booking.findMany({
-    where: status ? { status } : {},
-    select: {
-      id: true, userId: true, eventId: true, status: true, createdAt: true,
-      user: {
-        select: {
-          name: true, email: true
-        }
+  const where = status ? { status } : {};
+
+  const [bookings, totalItems] = await prisma.$transaction([
+    prisma.booking.findMany({
+      where,
+      select: {
+        id: true, userId: true, eventId: true, status: true, createdAt: true,
+        user: { select: { name: true, email: true } },
+        event: { select: { title: true, startsAt: true } }
       },
-      event: {
-        select: { title: true, startsAt: true }
-      }
-    },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.booking.count({ where }),
+  ]);
 
-    orderBy: { createdAt: "desc" }
-  });
-
-  return bookings;
+  return {
+    bookings,
+    pagination: buildPagination(page, limit, totalItems)
+  };
 
 };
 
-export async function getMyBookingsService(userId: string, status?: BookingStatus) {
+export async function getMyBookingsService(userId: string, page: number, limit: number, status?: BookingStatus) {
 
-  const bookings = await prisma.booking.findMany({
-    where: status ? { userId, status } : { userId },
-    select: {
-      id: true, eventId: true, status: true, createdAt: true, cancelledAt: true,
-      event: {
-        select: { title: true, startsAt: true, endsAt: true, status: true }
+  const where = status ? { userId, status } : { userId };
+
+  const [bookings, totalItems] = await prisma.$transaction([
+    prisma.booking.findMany({
+      where,
+      select: {
+        id: true, eventId: true, status: true, createdAt: true, cancelledAt: true,
+        event: { select: { title: true, startsAt: true, endsAt: true, status: true } },
+        tickets: { select: { status: true } }
       },
-      tickets: { select: { status: true } }
-    },
-    orderBy: { createdAt: "desc" }
-  });
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.booking.count({ where }),
+  ]);
 
+  return {
+    bookings: bookings.map(({ tickets, ...booking }) => {
+      const cancelledTicketsCount = tickets.filter((t) => t.status === "CANCELLED").length;
+      const activeTicketsCount = tickets.length - cancelledTicketsCount;
 
-  return bookings.map(({ tickets, ...booking }) => {
-    const cancelledTicketsCount = tickets.filter((t) => t.status === "CANCELLED").length;
-    const activeTicketsCount = tickets.length - cancelledTicketsCount;
-
-    return {
-      ...booking,
-      activeTicketsCount, cancelledTicketsCount
-    }
-  });
+      return {
+        ...booking,
+        activeTicketsCount, cancelledTicketsCount
+      }
+    }),
+    pagination: buildPagination(page, limit, totalItems)
+  };
 
 };
 

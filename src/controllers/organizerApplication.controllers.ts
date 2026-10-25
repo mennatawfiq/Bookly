@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { AppError } from "../errorhandling/appError";
 import { approveApplicationService, getApplicationService, getApplicationsService, getMyApplicationsService, postApplicationService, rejectApplicationService } from "../services/organizerApplication.services";
 import { ListApplicationsQuerySchema } from "../schemas/organizerApplication.schema";
+import { OffsetPaginationQuerySchema } from "../schemas/pagination.schema";
 
 
 export const postApplication = async (req: Request, res: Response) => {
@@ -28,7 +29,9 @@ export const getMyApplications = async (req: Request, res: Response) => {
     throw new AppError(400, "Invalid userId");
   }
 
-  const applications = await getMyApplicationsService(userId);
+  const { page, limit } = OffsetPaginationQuerySchema.parse(req.query);
+
+  const applications = await getMyApplicationsService(page, limit, userId);
 
   res.jsend.success({ applications }, 200);
 
@@ -50,9 +53,9 @@ export const getApplication = async (req: Request, res: Response) => {
 
 export const getApplications = async (req: Request, res: Response) => {
 
-  const { status } = ListApplicationsQuerySchema.parse(req.query);
+  const { status, page, limit } = ListApplicationsQuerySchema.parse(req.query);
 
-  const applications = await getApplicationsService(status);
+  const applications = await getApplicationsService(page, limit, status);
 
   res.jsend.success({ applications }, 200);
 

@@ -2,6 +2,7 @@ import { ApplicationStatus } from "../../prisma/generated/enums";
 import { AppError } from "../errorhandling/appError";
 import prisma from "../lib/prisma";
 import { ApproveApplication, CreateApplicationInput, RejectApplication } from "../schemas/organizerApplication.schema";
+import { buildPagination } from "../utils/pagination.util";
 
 export async function postApplicationService(userId: string, applicationInfo: CreateApplicationInput) {
 
@@ -47,21 +48,24 @@ export async function postApplicationService(userId: string, applicationInfo: Cr
 
 };
 
-export async function getMyApplicationsService(userId: string) {
+export async function getMyApplicationsService(page: number, limit: number, userId: string) {
 
-  return await prisma.organizerApplication.findMany({
-    where: { userId },
-    select: {
-      id: true,
-      organizationName: true,
-      description: true,
-      status: true,
-      reviewNote: true,
-      reviewedAt: true,
-      createdAt: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const where = { userId };
+
+  const [applications, totalItems] = await prisma.$transaction([
+    prisma.organizerApplication.findMany({
+      where,
+      select: {
+        id: true, organizationName: true, description: true, status: true, reviewNote: true, reviewedAt: true, createdAt: true,
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.organizerApplication.count({ where }),
+  ]);
+
+  return { applications, pagination: buildPagination(page, limit, totalItems) };
 
 };
 
@@ -88,22 +92,25 @@ export async function getApplicationService(applicationId: string) {
 
 };
 
-export async function getApplicationsService(status?: ApplicationStatus) {
+export async function getApplicationsService(page: number, limit: number, status?: ApplicationStatus) {
 
-  return await prisma.organizerApplication.findMany({
-    where: status ? { status } : {},
-    select: {
-      id: true,
-      organizationName: true,
-      description: true,
-      status: true,
-      reviewNote: true,
-      reviewedAt: true,
-      createdAt: true,
-      user: { select: { id: true, name: true, email: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const where = status ? { status } : {};
+
+  const [applications, totalItems] = await prisma.$transaction([
+    prisma.organizerApplication.findMany({
+      where,
+      select: {
+        id: true, organizationName: true, description: true, status: true, reviewNote: true, reviewedAt: true, createdAt: true,
+        user: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.organizerApplication.count({ where }),
+  ]);
+
+  return { applications, pagination: buildPagination(page, limit, totalItems) };
 
 };
 

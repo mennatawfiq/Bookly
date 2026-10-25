@@ -23,10 +23,9 @@ registry.registerPath({
   path: "/users",
   tags: ["Users"],
   summary: "List all users",
-  description: "Returns all users, newest first, including deleted (anonymized) accounts, which have `deletedAt` set. Use `role` to return only users with that role. Requires the ADMIN role.",
+  description: "Returns all users, newest first, including deleted (anonymized) accounts, which have `deletedAt` set. Use `role` to return only users with that role. Requires the ADMIN role. A page after the last one returns an empty list.",
   security: [{ [bearerAuth.name]: [] }],
   request: { query: ListUsersQuerySchema },
-  // later: pagination and limiting
   responses: {
     200: jsonResponse("List of users", AllUsersSuccess),
     400: jsonResponse("Invalid role value", ValidationFailResponse),

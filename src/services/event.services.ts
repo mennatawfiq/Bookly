@@ -5,6 +5,7 @@ import prisma from "../lib/prisma";
 import { CheckInInfo, CreateEventInput, PatchEventInput } from "../schemas/event.schema";
 import { CreateTicketTypeInput, PatchTicketTypeInput } from "../schemas/ticketType.schema";
 import { AuthenticatedUser } from "../types/auth";
+import { buildPagination } from "../utils/pagination.util";
 import { cancelBookingsInTx } from "./booking.services";
 
 
@@ -22,7 +23,7 @@ const eventSummarySelect = {
 
 const ticketTypeSummarySelect = { id: true, type: true, capacity: true, remaining: true } as const;
 
-export async function getEventsService(user?: AuthenticatedUser, status: EventStatus = "PUBLISHED") {
+export async function getEventsService(page: number, limit: number, user?: AuthenticatedUser, status: EventStatus = "PUBLISHED") {
 
   let where: Prisma.EventWhereInput;
 
@@ -36,36 +37,36 @@ export async function getEventsService(user?: AuthenticatedUser, status: EventSt
     where = { status, organizerId: user.id };
   }
 
-  const events = await prisma.event.findMany({
-    where,
-    select: {
-      id: true,
-      organizerId: true,
-      title: true,
-      description: true,
-      startsAt: true,
-      endsAt: true,
-      location: true,
-    },
-    orderBy: {
-      startsAt: "asc"
-    }
-  });
+  const [events, totalItems] = await prisma.$transaction([
+    prisma.event.findMany({
+      where,
+      select: { id: true, organizerId: true, title: true, description: true, startsAt: true, endsAt: true, location: true, },
+      orderBy: [{ startsAt: "desc" }, { id: "desc" }],
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.event.count({ where }),
+  ]);
 
-  return events;
+  return { events, pagination: buildPagination(page, limit, totalItems) };
 
 };
 
-export async function getMyEventsService(userId: string, status?: EventStatus) {
+export async function getMyEventsService(page: number, limit: number, userId: string, status?: EventStatus) {
 
-  const events = await prisma.event.findMany({
-    where: status ? { organizerId: userId, status } : { organizerId: userId },
-    orderBy: {
-      startsAt: "asc"
-    }
-  });
+  const where = status ? { organizerId: userId, status } : { organizerId: userId };
 
-  return events;
+  const [events, totalItems] = await prisma.$transaction([
+    prisma.event.findMany({
+      where,
+      orderBy: [{ startsAt: "asc" }, { id: "desc" }],
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.event.count({ where }),
+  ]);
+
+  return { events, pagination: buildPagination(page, limit, totalItems) };
 
 }
 
@@ -400,26 +401,37 @@ export async function deleteTicketTypeService(eventId: string, ticketTypeId: str
 
 };
 
-export async function getEventBookingsService(eventId: string, status?: BookingStatus) {
+export async function getEventBookingsService(eventId: string, page: number, limit: number, status?: BookingStatus) {
 
-  const bookings = await prisma.booking.findMany({
-    where: status ? { eventId, status } : { eventId }, select: {
-      id: true, status: true, createdAt: true, cancelledAt: true,
-      user: { select: { name: true, email: true } },
-      tickets: { select: { status: true } }
-    },
-    orderBy: { createdAt: "desc" }
-  });
+  const where = status ? { eventId, status } : { eventId };
 
-  return bookings.map(({ tickets, ...booking }) => {
-    const cancelledTicketsCount = tickets.filter((t) => t.status === "CANCELLED").length;
-    const activeTicketsCount = tickets.length - cancelledTicketsCount;
+  const [bookings, totalItems] = await prisma.$transaction([
+    prisma.booking.findMany({
+      where,
+      select: {
+        id: true, status: true, createdAt: true, cancelledAt: true,
+        user: { select: { name: true, email: true } },
+        tickets: { select: { status: true } }
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.booking.count({ where }),
+  ]);
 
-    return {
-      ...booking,
-      activeTicketsCount, cancelledTicketsCount
-    }
-  });
+  return {
+    bookings: bookings.map(({ tickets, ...booking }) => {
+      const cancelledTicketsCount = tickets.filter((t) => t.status === "CANCELLED").length;
+      const activeTicketsCount = tickets.length - cancelledTicketsCount;
+
+      return {
+        ...booking,
+        activeTicketsCount, cancelledTicketsCount
+      }
+    }),
+    pagination: buildPagination(page, limit, totalItems)
+  };
 
 };
 

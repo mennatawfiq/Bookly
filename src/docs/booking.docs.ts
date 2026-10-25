@@ -10,7 +10,7 @@ registry.registerPath({
   path: "/bookings",
   tags: ["Bookings"],
   summary: "List all bookings",
-  description: "Returns every booking on the platform, newest first, with the user's name and email and the event's title and start time. Requires the ADMIN role.",
+  description: "Returns every booking on the platform, newest first, with the user's name and email and the event's title and start time. Requires the ADMIN role. A page after the last one returns an empty list.",
   request: { query: ListBookingsQuerySchema },
   security: [{ [bearerAuth.name]: [] }],
   responses: {
@@ -26,7 +26,7 @@ registry.registerPath({
   path: "/bookings/mine",
   tags: ["Bookings"],
   summary: "List my bookings",
-  description: "Returns all bookings of the authenticated user, newest first, including cancelled ones. Each booking includes the event's title, start and end time, and status. `activeTicketsCount` is the number of tickets that are not cancelled (valid or used). `cancelledTicketsCount` is the number of cancelled tickets. For a cancelled booking, `cancelledTicketsCount` is the number of tickets it held. Requires authentication.",
+  description: "Returns all bookings of the authenticated user, newest first, including cancelled ones. Each booking includes the event's title, start and end time, and status. `activeTicketsCount` is the number of tickets that are not cancelled (valid or used). `cancelledTicketsCount` is the number of cancelled tickets. For a cancelled booking, `cancelledTicketsCount` is the number of tickets it held. Requires authentication. A page after the last one returns an empty list.",
   security: [{ [bearerAuth.name]: [] }],
   request: { query: ListBookingsQuerySchema },
   responses: {

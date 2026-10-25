@@ -12,7 +12,7 @@ registry.registerPath({
   path: "/events",
   tags: ["Events"],
   summary: "List events",
-  description: "Without status, returns published events. With status of `DRAFT` or `CANCELLED`, returns only your own events with that status (admins see all). Requires authentication for those.",
+  description: "Without status, returns published events. With status of `DRAFT` or `CANCELLED`, returns only your own events with that status (admins see all). Requires authentication for those. A page after the last one returns an empty list.",
   security: [{}, { [bearerAuth.name]: [] }],
   request: { query: ListEventsQuerySchema },
   responses: {
@@ -28,7 +28,7 @@ registry.registerPath({
   path: "/events/mine",
   tags: ["Events"],
   summary: "List all owned events",
-  description: "Returns all events created by the authenticated organizer, in any status (draft, published, cancelled). Requires the ORGANIZER or ADMIN role.",
+  description: "Returns all events created by the authenticated organizer, in any status (draft, published, cancelled). Requires the ORGANIZER or ADMIN role. A page after the last one returns an empty list.",
   security: [{ [bearerAuth.name]: [] }],
   request: { query: ListEventsQuerySchema },
   responses: {
@@ -200,7 +200,7 @@ registry.registerPath({
   path: "/events/{eventId}/bookings",
   tags: ["Events"],
   summary: "List bookings of an event",
-  description: "Returns all bookings of an event, newest first, including cancelled ones. Each booking includes the name and email of the user who booked, its status, and ticket counts. `activeTicketsCount` is the number of tickets that are not cancelled (valid or used). `cancelledTicketsCount` is the number of cancelled tickets. Allowed for the event’s organizer and for admins. Requires the `ORGANIZER` or `ADMIN` role.",
+  description: "Returns all bookings of an event, newest first, including cancelled ones. Each booking includes the name and email of the user who booked, its status, and ticket counts. `activeTicketsCount` is the number of tickets that are not cancelled (valid or used). `cancelledTicketsCount` is the number of cancelled tickets. Allowed for the event’s organizer and for admins. Requires the `ORGANIZER` or `ADMIN` role. A page after the last one returns an empty list.",
   security: [{ [bearerAuth.name]: [] }],
   request: { params: EventIdParamSchema, query: ListBookingsQuerySchema },
   responses: {

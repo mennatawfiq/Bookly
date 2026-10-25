@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { EventStatus } from "../../prisma/generated/enums";
+import { OffsetPaginationQuerySchema } from "./pagination.schema";
 
 export const eventIdParamSchema = z.object({
   eventId: z.uuid().meta({
@@ -64,7 +65,7 @@ export const CheckInSchema = z.object({
 });
 export type CheckInInfo = z.infer<typeof CheckInSchema>;
 
-export const ListEventsQuerySchema = z.object({
+export const ListEventsQuerySchema = OffsetPaginationQuerySchema.extend({
   status: z.enum(EventStatus).optional().meta({
     description: "Only return events with this status",
     example: "PUBLISHED",

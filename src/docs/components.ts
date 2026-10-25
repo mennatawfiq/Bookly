@@ -8,6 +8,7 @@ import { TicketTypeKind } from "../../prisma/generated/enums";
 import { AdminApplicationItemSchema, applicationIdParamSchema, ApplicationItemSchema, ApplicationSchema, ApproveApplicationSchema, CreateApplicationSchema, RejectApplicationSchema } from "../schemas/organizerApplication.schema";
 import { AdminUserItemSchema, UserSchema } from "../schemas/user.schema";
 import { registerSchema } from "../schemas/auth.schema";
+import { PaginationSchema } from "../schemas/pagination.schema";
 
 // Events
 
@@ -15,9 +16,9 @@ export const Event = registry.register("Event", EventSchema);
 export const EventIdParamSchema = registry.register("EventIdParamSchema", eventIdParamSchema);
 
 export const AllEvent = registry.register("AllEvent", Event.omit({ status: true, createdAt: true, updatedAt: true }));
-export const AllEventsSuccess = registry.register("AllEventsSuccess", jsendSuccess(z.object({ events: z.array(AllEvent) })));
+export const AllEventsSuccess = registry.register("AllEventsSuccess", jsendSuccess(z.object({ events: z.array(AllEvent), pagination: PaginationSchema })));
 
-export const OwnEventsSuccess = registry.register("OwnEventsSuccess", jsendSuccess(z.object({ events: z.array(Event) })));
+export const OwnEventsSuccess = registry.register("OwnEventsSuccess", jsendSuccess(z.object({ events: z.array(Event), pagination: PaginationSchema })));
 
 export const EventDetailSchema = Event.extend({ ticketTypes: z.array(TicketTypeSummarySchema) });
 export const EventSuccess = registry.register("EventSuccess", jsendSuccess(z.object({ event: EventDetailSchema })));
@@ -34,7 +35,7 @@ export const TicketTypeSuccess = registry.register("TicketTypeSuccess", jsendSuc
 export const PatchTicketTypeRequest = registry.register("PatchTicketTypeRequest", PatchTicketTypeSchema);
 
 export const EventBookingListItem = registry.register("EventBookingListItem", EventBookingListItemSchema);
-export const EventBookingsSuccess = registry.register("EventBookingsSuccess", jsendSuccess(z.object({ bookings: z.array(EventBookingListItem) })));
+export const EventBookingsSuccess = registry.register("EventBookingsSuccess", jsendSuccess(z.object({ bookings: z.array(EventBookingListItem), pagination: PaginationSchema })));
 
 export const TicketCheckInRequest = registry.register("TicketCheckInRequest", CheckInSchema);
 export const TicketCheckInSuccess = registry.register("TicketCheckInSuccess", jsendSuccess(z.object({ type: z.enum(TicketTypeKind) })));
@@ -42,10 +43,10 @@ export const TicketCheckInSuccess = registry.register("TicketCheckInSuccess", js
 // Bookings
 
 export const BookingListItem = registry.register("BookingListItem", BookingListItemSchema);
-export const AllBookingsSuccess = registry.register("AllBookingsSuccess", jsendSuccess(z.object({ bookings: z.array(BookingListItem) })));
+export const AllBookingsSuccess = registry.register("AllBookingsSuccess", jsendSuccess(z.object({ bookings: z.array(BookingListItem), pagination: PaginationSchema })));
 
 export const UserBookingListItem = registry.register("UserBookingListItem", UserBookingListItemSchema);
-export const UserBookingsSuccess = registry.register("UserBookingsSuccess", jsendSuccess(z.object({ bookings: z.array(UserBookingListItem) })));
+export const UserBookingsSuccess = registry.register("UserBookingsSuccess", jsendSuccess(z.object({ bookings: z.array(UserBookingListItem), pagination: PaginationSchema })));
 
 export const UserBookingDetail = registry.register("UserBookingDetail", UserBookingDetailSchema);
 export const UserBookingDetailSuccess = registry.register("UserBookingDetailSuccess", jsendSuccess(z.object({ booking: UserBookingDetail })));
@@ -64,13 +65,13 @@ export const Application = registry.register("Application", ApplicationSchema);
 export const CreateApplicationSuccess = registry.register("CreateApplicationSuccess", jsendSuccess(z.object({ application: Application })));
 
 export const ApplicationItem = registry.register("ApplicationItem", ApplicationItemSchema);
-export const MyApplicationsSuccess = registry.register("MyApplicationsSuccess", jsendSuccess(z.object({ applications: z.array(ApplicationItem) })));
+export const MyApplicationsSuccess = registry.register("MyApplicationsSuccess", jsendSuccess(z.object({ applications: z.array(ApplicationItem), pagination: PaginationSchema })));
 
 export const ApplicationIdParam = registry.register("ApplicationIdParam", applicationIdParamSchema);
 export const ApplicationSuccess = registry.register("ApplicationSuccess", jsendSuccess(z.object({ application: ApplicationItem })));
 
 export const AdminApplicationItem = registry.register("AdminApplicationItem", AdminApplicationItemSchema);
-export const AllApplicationsSuccess = registry.register("AllApplicationsSuccess", jsendSuccess(z.object({ applications: z.array(AdminApplicationItem) })));
+export const AllApplicationsSuccess = registry.register("AllApplicationsSuccess", jsendSuccess(z.object({ applications: z.array(AdminApplicationItem), pagination: PaginationSchema })));
 
 export const ApproveApplicationRequest = registry.register("ApproveApplicationRequest", ApproveApplicationSchema);
 export const RejectApplicationRequest = registry.register("RejectApplicationRequest", RejectApplicationSchema);
@@ -87,4 +88,4 @@ export const RegisterSuccess = registry.register("RegisterSuccess", jsendSuccess
 export const MeSuccess = registry.register("MeSuccess", jsendSuccess(z.object({ user: User })));
 
 export const AdminUserItem = registry.register("AdminUserItem", AdminUserItemSchema);
-export const AllUsersSuccess = registry.register("AllUsersSuccess", jsendSuccess(z.object({ users: z.array(AdminUserItem) })));
+export const AllUsersSuccess = registry.register("AllUsersSuccess", jsendSuccess(z.object({ users: z.array(AdminUserItem), pagination: PaginationSchema })));

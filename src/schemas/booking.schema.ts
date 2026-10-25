@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BookingStatus, EventStatus, TicketStatus, TicketTypeKind } from "../../prisma/generated/enums";
+import { OffsetPaginationQuerySchema } from "./pagination.schema";
 
 export const BookingListItemSchema = z.object({
   id: z.uuid().meta({ example: "88bf6c1e-3d2a-4a57-9c1e-2f4a8e6d1b90" }),
@@ -119,7 +120,7 @@ export const PatchTicketCountSchema = z.object({
 
 export type PatchTicketCountInput = z.infer<typeof PatchTicketCountSchema>;
 
-export const ListBookingsQuerySchema = z.object({
+export const ListBookingsQuerySchema = OffsetPaginationQuerySchema.extend({
   status: z.enum(BookingStatus).optional().meta({
     description: "Only return bookings with this status",
     example: "CONFIRMED",
