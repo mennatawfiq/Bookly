@@ -21,7 +21,7 @@ export const TicketTypeSummarySchema = TicketTypeSchema.omit({
 
 export const CreateTicketTypeSchema = z.object({
   type: z.enum(TicketTypeKind).meta({ example: "VIP" }),
-  capacity: z.int().min(1).max(100_1000).meta({ example: 50 }), // TODO: fix this: max(100_000)
+  capacity: z.int().min(1).max(100_000).meta({ example: 50 }),
 });
 
 export type CreateTicketTypeInput = z.infer<typeof CreateTicketTypeSchema>;

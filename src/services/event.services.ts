@@ -5,6 +5,7 @@ import prisma from "../lib/prisma";
 import { CheckInInfo, CreateEventInput, PatchEventInput } from "../schemas/event.schema";
 import { CreateTicketTypeInput, PatchTicketTypeInput } from "../schemas/ticketType.schema";
 import { AuthenticatedUser } from "../types/auth";
+import { cancelBookingsInTx } from "./booking.services";
 
 
 const eventSummarySelect = {
@@ -120,7 +121,7 @@ export async function patchEventService(eventId: string, eventInfo: PatchEventIn
   }
 
   if (existingEvent.status !== "DRAFT") {
-    throw new AppError(400, "Event cannot be edited");
+    throw new AppError(409, "Event cannot be edited");
   }
 
   const startsAt = eventInfo.startsAt ? new Date(eventInfo.startsAt) : existingEvent.startsAt;
@@ -214,29 +215,22 @@ export async function cancelEventService(eventId: string) {
         throw new AppError(409, "Event already started");
       }
 
-      const bookingRows = await tx.$queryRaw<{ id: string }[]>
-        `SELECT id FROM "Booking" WHERE "eventId" = ${eventId} AND status = 'CONFIRMED' FOR UPDATE`;
+      if (event.status === "PUBLISHED") {
 
-      const bookingIds = bookingRows.map((b) => b.id);
+        const bookingRows = await tx.$queryRaw<{ id: string }[]>
+          `SELECT id FROM "Booking" WHERE "eventId" = ${eventId} AND status = 'CONFIRMED' FOR UPDATE`;
 
-      if (bookingIds.length === 0) {
-        return;
+        const bookingIds = bookingRows.map((b) => b.id);
+
+        if (bookingIds.length === 0) {
+          return;
+        }
+
+        const cancelledAt = new Date();
+
+        await cancelBookingsInTx(tx, bookingIds, cancelledAt); // cancels bookings and tickets 
+
       }
-
-      await tx.$queryRaw`SELECT id FROM "Ticket" WHERE "bookingId" IN (${Prisma.join(bookingIds)}) AND status = 'VALID'
-            ORDER BY id FOR UPDATE`;
-
-      const cancelledAt = new Date();
-
-      await tx.ticket.updateMany({
-        where: { bookingId: { in: bookingIds }, status: "VALID" },
-        data: { status: "CANCELLED", cancelledAt, }
-      });
-
-      await tx.booking.updateMany({
-        where: { eventId, status: "CONFIRMED" },
-        data: { status: "CANCELLED", cancelledAt }
-      });
 
       await tx.event.update({
         where: { id: eventId },

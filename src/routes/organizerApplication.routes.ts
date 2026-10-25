@@ -17,7 +17,7 @@ router.get("/:applicationId", authenticate, validate(applicationIdParamSchema, "
   asyncHandler(getApplication)
 );
 
-router.get("/", authenticate, authorize('ADMIN'), validate(ListApplicationsQuerySchema, "query"), asyncHandler(getApplications));
+router.get("/", authenticate, authorize('ADMIN'), asyncHandler(getApplications));
 
 router.post("/:applicationId/approve", authenticate, authorize('ADMIN'), validate(applicationIdParamSchema, "params"),
   validate(ApproveApplicationSchema), asyncHandler(approveApplication));

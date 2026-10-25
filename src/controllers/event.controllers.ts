@@ -148,7 +148,7 @@ export const deleteTicketType = async (req: Request, res: Response) => {
 
   await deleteTicketTypeService(eventId, ticketTypeId);
 
-  res.jsend.success(null, 204);
+  res.status(204).send();
 
 };
 

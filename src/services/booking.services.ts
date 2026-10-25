@@ -86,7 +86,7 @@ export async function getBookingService(bookingId: string) {
   const { tickets, ...rest } = booking;
 
   return {
-    rest,
+    ...rest,
     activeTicketsCount: tickets.length - cancelledTicketsCount,
     cancelledTicketsCount,
     activeTicketsByType: [...activeByType].map(([type, count]) => ({ type, count })),
@@ -209,7 +209,7 @@ export async function cancelBookingsInTx(tx: Prisma.TransactionClient, bookingId
   await tx.$queryRaw`SELECT id FROM "TicketType" WHERE id IN (${Prisma.join(typeIds)}) ORDER BY id FOR UPDATE`;
 
   await tx.ticket.updateMany({
-    where: { id: { in: tickets.map((t) => t.id) } },
+    where: { id: { in: tickets.map((t) => t.id) }, status: "VALID" },
     data: { status: "CANCELLED", cancelledAt },
   });
 
@@ -421,10 +421,7 @@ export async function patchTicketCountService(bookingId: string, ticketCountInfo
         existingTicketTypes.set(t.type, { id: t.id, remaining: t.remaining });
       }
 
-      let total = ticketRows.length + ticketCountInfo.tickets.reduce((sum, c) => sum + c.count, 0);
-      if (total > 10) {
-        throw new AppError(400, `A booking can have at most 10 tickets`);
-      }
+      let total = ticketRows.length;
 
       const deltas: { id: string; diff: number }[] = [];
 
@@ -442,6 +439,11 @@ export async function patchTicketCountService(bookingId: string, ticketCountInfo
           continue;
         }
         deltas.push({ id: existingType.id, diff });
+        total += diff;
+      }
+
+      if (total > 10) {
+        throw new AppError(400, `A booking can have at most 10 tickets`);
       }
 
       if (deltas.length === 0) {
