@@ -5,6 +5,7 @@ build/
 out/
 
 .env
+.env.test
 prisma/generated
 
 .claude
