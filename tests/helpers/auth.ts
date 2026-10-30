@@ -1,14 +1,14 @@
 import bcrypt from "bcrypt";
-import { randomUUID } from "node:crypto";
 import request from "supertest";
 import { app } from "../../src/app";
-import { TestCredentials } from "../types.test";
+import { TestCredentials } from "../types";
 import { UserRole } from "../../prisma/generated/enums";
 import prisma from "../../src/lib/prisma";
+import crypto from "node:crypto";
 
 
 export async function createUser(role: UserRole = UserRole.USER,) {
-  const id = randomUUID();
+  const id = crypto.randomUUID();
   const password = "TestPassword123!";
 
   const user = await prisma.user.create({
@@ -40,4 +40,16 @@ export async function loginAs(user: TestCredentials) {
 
 export function authHeader(token: string) {
   return { Authorization: `Bearer ${token}`, };
+}
+
+export async function deleteUser(id: string) {
+  await prisma.user.update({
+    where: { id },
+    data: {
+      name: "Deleted user",
+      email: `deleted-${id}@deleted.invalid`,
+      passwordHash: crypto.randomBytes(32).toString("base64url"),
+      deletedAt: new Date(),
+    },
+  });
 }
