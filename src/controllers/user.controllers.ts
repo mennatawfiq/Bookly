@@ -21,9 +21,9 @@ export const getUsers = async (req: Request, res: Response) => {
 
   const { role, page, limit } = ListUsersQuerySchema.parse(req.query);
 
-  const users = await getUsersService(page, limit, role);
+  const result = await getUsersService(page, limit, role);
 
-  res.jsend.success({ users }, 200);
+  res.jsend.success(result, 200);
 
 };
 

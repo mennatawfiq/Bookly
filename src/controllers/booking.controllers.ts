@@ -9,9 +9,9 @@ export const getAllBookings = async (req: Request, res: Response) => {
 
   const { status, page, limit } = ListBookingsQuerySchema.parse(req.query);
 
-  const bookings = await getAllBookingsService(page, limit, status);
+  const result = await getAllBookingsService(page, limit, status);
 
-  res.jsend.success({ bookings }, 200);
+  res.jsend.success(result, 200);
 
 };
 
@@ -25,9 +25,9 @@ export const getMyBookings = async (req: Request, res: Response) => {
     throw new AppError(400, "Invalid userId");
   }
 
-  const bookings = await getMyBookingsService(userId, page, limit, status);
+  const result = await getMyBookingsService(userId, page, limit, status);
 
-  res.jsend.success({ bookings }, 200);
+  res.jsend.success(result, 200);
 
 };
 
