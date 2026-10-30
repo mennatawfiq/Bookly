@@ -9,9 +9,9 @@ export const getEvents = async (req: Request, res: Response) => {
 
   const { status, page, limit } = ListEventsQuerySchema.parse(req.query);
 
-  const events = await getEventsService(page, limit, req.user, status);
+  const result = await getEventsService(page, limit, req.user, status);
 
-  res.jsend.success({ events }, 200);
+  res.jsend.success(result, 200);
 
 };
 
@@ -25,9 +25,9 @@ export const getMyEvents = async (req: Request, res: Response) => {
 
   const { status, page, limit } = ListEventsQuerySchema.parse(req.query);
 
-  const events = await getMyEventsService(page, limit, userId, status);
+  const result = await getMyEventsService(page, limit, userId, status);
 
-  res.jsend.success({ events }, 200);
+  res.jsend.success(result, 200);
 
 };
 
@@ -168,9 +168,9 @@ export const getEventBookings = async (req: Request, res: Response) => {
 
   const { status, page, limit } = ListBookingsQuerySchema.parse(req.query);
 
-  const bookings = await getEventBookingsService(eventId, page, limit, status);
+  const result = await getEventBookingsService(eventId, page, limit, status);
 
-  res.jsend.success({ bookings }, 200);
+  res.jsend.success(result, 200);
 
 };
 

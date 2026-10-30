@@ -31,9 +31,9 @@ export const getMyApplications = async (req: Request, res: Response) => {
 
   const { page, limit } = OffsetPaginationQuerySchema.parse(req.query);
 
-  const applications = await getMyApplicationsService(page, limit, userId);
+  const result = await getMyApplicationsService(page, limit, userId);
 
-  res.jsend.success({ applications }, 200);
+  res.jsend.success(result, 200);
 
 };
 
@@ -55,9 +55,9 @@ export const getApplications = async (req: Request, res: Response) => {
 
   const { status, page, limit } = ListApplicationsQuerySchema.parse(req.query);
 
-  const applications = await getApplicationsService(page, limit, status);
+  const result = await getApplicationsService(page, limit, status);
 
-  res.jsend.success({ applications }, 200);
+  res.jsend.success(result, 200);
 
 };
 
