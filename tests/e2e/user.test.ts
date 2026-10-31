@@ -202,9 +202,9 @@ describe("GET /users route tests", () => {
     expect(response.status).toBe(200);
     expect(response.body.status).toBe("success");
     // admin + 2 other users
-    expect(response.body.data.users.users).toHaveLength(3);
-    expect(response.body.data.users.pagination.totalItems).toBe(3);
-    response.body.data.users.users.forEach((u: object) => {
+    expect(response.body.data.users).toHaveLength(3);
+    expect(response.body.data.pagination.totalItems).toBe(3);
+    response.body.data.users.forEach((u: object) => {
       expect(u).not.toHaveProperty('passwordHash');
     });
   });
@@ -264,9 +264,9 @@ describe("GET /users route tests", () => {
       .set(authHeader(token));
 
     expect(response.status).toBe(200);
-    expect(response.body.data.users.users).toHaveLength(2);
-    expect(response.body.data.users.pagination.totalItems).toBe(2);
-    response.body.data.users.users.forEach((u: { role: string }) => {
+    expect(response.body.data.users).toHaveLength(2);
+    expect(response.body.data.pagination.totalItems).toBe(2);
+    response.body.data.users.forEach((u: { role: string }) => {
       expect(u.role).toBe("ORGANIZER");
     });
   });
@@ -296,8 +296,8 @@ describe("GET /users route tests", () => {
       .set(authHeader(token));
 
     expect(page1.status).toBe(200);
-    expect(page1.body.data.users.users).toHaveLength(2);
-    expect(page1.body.data.users.pagination).toMatchObject({
+    expect(page1.body.data.users).toHaveLength(2);
+    expect(page1.body.data.pagination).toMatchObject({
       page: 1, limit: 2, totalItems: 3, totalPages: 2,
       hasNextPage: true, hasPreviousPage: false,
     });
@@ -306,8 +306,8 @@ describe("GET /users route tests", () => {
       .get("/users?page=2&limit=2")
       .set(authHeader(token));
 
-    expect(page2.body.data.users.users).toHaveLength(1);
-    expect(page2.body.data.users.pagination).toMatchObject({
+    expect(page2.body.data.users).toHaveLength(1);
+    expect(page2.body.data.pagination).toMatchObject({
       hasNextPage: false, hasPreviousPage: true,
     });
   });
@@ -320,7 +320,7 @@ describe("GET /users route tests", () => {
       .set(authHeader(token));
 
     expect(response.status).toBe(200);
-    expect(response.body.data.users.users).toEqual([]);
+    expect(response.body.data.users).toEqual([]);
   });
 
   it("includes deleted (anonymized) users with deletedAt set", async () => {
@@ -332,7 +332,7 @@ describe("GET /users route tests", () => {
       .get("/users")
       .set(authHeader(token));
 
-    const deleted = response.body.data.users.users.find((u: { id: string }) => u.id === account.user.id);
+    const deleted = response.body.data.users.find((u: { id: string }) => u.id === account.user.id);
 
     expect(response.status).toBe(200);
     expect(deleted).toBeDefined();
