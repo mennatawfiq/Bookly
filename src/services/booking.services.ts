@@ -158,6 +158,10 @@ export async function postBookingService(userId: string, eventId: string, bookin
         if (remaining < count) {
           throw new AppError(409, `The required tickets count of type ${type} exceeds the remaining capacity`);
         }
+      }
+
+      for (const { id, type, remaining } of rows) {
+        const count = countByType.get(type)!;
 
         await tx.ticketType.update({
           where: { id, eventId },
