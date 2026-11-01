@@ -465,12 +465,12 @@ export async function checkInService(eventId: string, codeInfo: CheckInInfo, use
     throw new AppError(404, "Ticket not found");
   }
 
-  if (ticket.status !== 'VALID') {
-    throw new AppError(409, "Ticket is not valid");
-  }
-
   if (ticket.booking.eventId !== eventId) {
     throw new AppError(404, "Ticket not found");
+  }
+
+  if (ticket.status !== 'VALID') {
+    throw new AppError(409, "Ticket is not valid");
   }
 
   const result = await prisma.ticket.updateMany({
