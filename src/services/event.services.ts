@@ -237,10 +237,6 @@ export async function cancelEventService(eventId: string) {
 
         const bookingIds = bookingRows.map((b) => b.id);
 
-        if (bookingIds.length === 0) {
-          return;
-        }
-
         const cancelledAt = new Date();
 
         await cancelBookingsInTx(tx, bookingIds, cancelledAt); // cancels bookings and tickets 
