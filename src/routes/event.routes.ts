@@ -16,14 +16,14 @@ router.get("/mine", authenticate, authorize('ORGANIZER'), asyncHandler(getMyEven
 
 router.get("/:eventId", optionalAuthenticate, validate(eventIdParamSchema, "params"), asyncHandler(getEvent));
 
-router.post("/", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(CreateEventSchema), asyncHandler(postEvent));
+router.post("/", authenticate, authorize('ORGANIZER'), validate(CreateEventSchema), asyncHandler(postEvent));
 
-router.patch("/:eventId", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(eventIdParamSchema, "params"), validate(PatchEventSchema),
+router.patch("/:eventId", authenticate, authorize('ORGANIZER'), validate(eventIdParamSchema, "params"), validate(PatchEventSchema),
   requireOwnership({ model: prisma.event, paramName: "eventId", ownerField: "organizerId", resourceName: "Event" }),
   asyncHandler(patchEvent)
 );
 
-router.post("/:eventId/publish", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(eventIdParamSchema, "params"),
+router.post("/:eventId/publish", authenticate, authorize('ORGANIZER'), validate(eventIdParamSchema, "params"),
   requireOwnership({ model: prisma.event, paramName: "eventId", ownerField: "organizerId", resourceName: "Event" }),
   asyncHandler(publishEvent)
 );
@@ -33,17 +33,17 @@ router.post("/:eventId/cancel", authenticate, authorize('ADMIN', 'ORGANIZER'), v
   asyncHandler(cancelEvent)
 );
 
-router.post("/:eventId/ticket-types", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(eventIdParamSchema, "params"), validate(CreateTicketTypeSchema),
+router.post("/:eventId/ticket-types", authenticate, authorize('ORGANIZER'), validate(eventIdParamSchema, "params"), validate(CreateTicketTypeSchema),
   requireOwnership({ model: prisma.event, paramName: "eventId", ownerField: "organizerId", resourceName: "Event" }),
   asyncHandler(postTicketType)
 );
 
-router.patch("/:eventId/ticket-types/:ticketTypeId", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(TicketTypeIdParamSchema, "params"),
+router.patch("/:eventId/ticket-types/:ticketTypeId", authenticate, authorize('ORGANIZER'), validate(TicketTypeIdParamSchema, "params"),
   validate(PatchTicketTypeSchema), requireOwnership({ model: prisma.event, paramName: "eventId", ownerField: "organizerId", resourceName: "Event" }),
   asyncHandler(patchTicketType)
 );
 
-router.delete("/:eventId/ticket-types/:ticketTypeId", authenticate, authorize('ADMIN', 'ORGANIZER'), validate(TicketTypeIdParamSchema, "params"),
+router.delete("/:eventId/ticket-types/:ticketTypeId", authenticate, authorize('ORGANIZER'), validate(TicketTypeIdParamSchema, "params"),
   requireOwnership({ model: prisma.event, paramName: "eventId", ownerField: "organizerId", resourceName: "Event" }),
   asyncHandler(deleteTicketType)
 );
