@@ -124,9 +124,9 @@ export async function approveApplicationService(applicationId: string, adminId: 
 
   await prisma.$transaction(
     async (tx) => {
-      await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${application?.userId} FOR UPDATE`;
-
       await tx.$queryRaw`SELECT id FROM "OrganizerApplication" WHERE id = ${applicationId} FOR UPDATE`;
+
+      await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${application?.userId} FOR UPDATE`;
 
       await tx.organizerApplication.update({
         where: { id: applicationId, status: "PENDING" },
