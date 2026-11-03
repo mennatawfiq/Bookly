@@ -3,6 +3,7 @@ import { jsonResponse } from "./helpers";
 import { MessageFailResponse, ValidationFailResponse, ServerErrorResponse } from "./jsend.docs";
 import { AllApplicationsSuccess, ApplicationIdParam, ApproveApplicationRequest, CreateApplicationRequest, CreateApplicationSuccess, MyApplicationsSuccess, ApplicationSuccess, RejectApplicationRequest } from "./components";
 import { ListApplicationsQuerySchema } from "../schemas/organizerApplication.schema";
+import { OffsetPaginationQuerySchema } from "../schemas/pagination.schema";
 
 registry.registerPath({
   method: "post",
@@ -34,9 +35,10 @@ registry.registerPath({
   summary: "List my applications",
   description: "Returns all organizer applications of the authenticated user, newest first, including approved and rejected ones. `reviewNote` is the admin's reason, and it is `null` until the application is reviewed. Requires authentication. A page after the last one returns an empty list.",
   security: [{ [bearerAuth.name]: [] }],
-  request: { query: ListApplicationsQuerySchema },
+  request: { query: OffsetPaginationQuerySchema },
   responses: {
     200: jsonResponse("List of your applications", MyApplicationsSuccess),
+    400: jsonResponse("Invalid pagination value", ValidationFailResponse),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   },
@@ -81,7 +83,7 @@ registry.registerPath({
   path: "/organizer-applications/{applicationId}/approve",
   tags: ["Organizer Applications"],
   summary: "Approve an application",
-  description: "Approves a `PENDING` organizer application. In one transaction, the application becomes `APPROVED`, the reviewing admin and the review time are recorded, and the applicant's role changes to `ORGANIZER`. `reviewNote` is optional. A reviewed application cannot be changed again. Requires the ADMIN role.",
+  description: "Approves a `PENDING` organizer application. In one transaction, the application becomes `APPROVED`, the reviewing admin and the review time are recorded, and the applicant's role changes to `ORGANIZER`. `reviewNote` is optional. A reviewed application cannot be changed again. A missing or already reviewed application returns 404. Requires the ADMIN role.",
   security: [{ [bearerAuth.name]: [] }],
   request: {
     params: ApplicationIdParam,
@@ -95,7 +97,8 @@ registry.registerPath({
     400: jsonResponse("Validation failed", ValidationFailResponse),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     403: jsonResponse("Not an ADMIN", MessageFailResponse),
-    404: jsonResponse("Application not found, or the applicant's account was deleted", MessageFailResponse),
+    404: jsonResponse("Application not found, or it is not `PENDING`", MessageFailResponse),
+    409: jsonResponse("The applicant's account was deleted", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   },
 });
@@ -119,8 +122,7 @@ registry.registerPath({
     400: jsonResponse("Validation failed, for example a missing `reviewNote`", ValidationFailResponse),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     403: jsonResponse("Not an ADMIN", MessageFailResponse),
-    404: jsonResponse("Application not found", MessageFailResponse),
-    409: jsonResponse("The application is not `PENDING`", MessageFailResponse),
+    404: jsonResponse("Application not found, or it is not `PENDING`", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   },
 });

@@ -15,6 +15,7 @@ registry.registerPath({
   security: [{ [bearerAuth.name]: [] }],
   responses: {
     200: jsonResponse("List of all bookings", AllBookingsSuccess),
+    400: jsonResponse("Invalid status or pagination value", ValidationFailResponse),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     403: jsonResponse("Not an ADMIN", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
@@ -31,6 +32,7 @@ registry.registerPath({
   request: { query: ListBookingsQuerySchema },
   responses: {
     200: jsonResponse("List of your bookings", UserBookingsSuccess),
+    400: jsonResponse("Invalid status or pagination value", ValidationFailResponse),
     401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
     500: jsonResponse("Internal server error", ServerErrorResponse),
   }
