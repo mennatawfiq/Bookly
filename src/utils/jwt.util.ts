@@ -1,15 +1,14 @@
-import jwt from "jsonwebtoken";
-import { env } from "../config/env";
+import jwt from 'jsonwebtoken';
+import { env } from '../config/env';
 
 export const generateAccessToken = (id: string) => {
-
   return jwt.sign(
     {
-      sub: id
+      sub: id,
     },
     env.JWT_SECRET,
     {
-      expiresIn: env.JWT_EXPIRES_IN
-    }
+      expiresIn: env.JWT_EXPIRES_IN,
+    },
   );
 };

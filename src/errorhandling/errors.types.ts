@@ -1,4 +1,4 @@
-import { Response } from "express";
+import { Response } from 'express';
 
 export interface IErrorHandler {
   canHandle(error: unknown): boolean;
@@ -19,4 +19,4 @@ export class ErrorHandlerRegistry {
       handler.handle(error, res);
     }
   }
-};
+}

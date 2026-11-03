@@ -1,10 +1,8 @@
-import { ZodError } from "zod";
-import { IErrorHandler } from "../errors.types";
-import { Response } from "express";
-
+import { ZodError } from 'zod';
+import { IErrorHandler } from '../errors.types';
+import { Response } from 'express';
 
 export class ZodErrorHandler implements IErrorHandler {
-
   canHandle(error: unknown): boolean {
     return error instanceof ZodError;
   }
@@ -14,14 +12,13 @@ export class ZodErrorHandler implements IErrorHandler {
 
     res.jsend.fail(
       {
-        message: "Validation failed.",
+        message: 'Validation failed.',
         errors: zodError.issues.map((issue) => ({
-          field: issue.path.join("."),
-          message: issue.message
-        }))
+          field: issue.path.join('.'),
+          message: issue.message,
+        })),
       },
-      400
+      400,
     );
   }
-
-};
+}

@@ -1,9 +1,8 @@
-import { UserRole } from "../../prisma/generated/enums";
-
+import { UserRole } from '../../prisma/generated/enums';
 
 export interface AuthenticatedUser {
   id: string;
-  role: UserRole
+  role: UserRole;
 }
 
 export type OwnableDelegate<T> = {

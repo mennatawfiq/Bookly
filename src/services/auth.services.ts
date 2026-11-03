@@ -1,46 +1,49 @@
-import bcrypt from "bcrypt";
-import prisma from "../lib/prisma";
-import { AppError } from "../errorhandling/appError";
+import bcrypt from 'bcrypt';
+import prisma from '../lib/prisma';
+import { AppError } from '../errorhandling/appError';
 
 export async function registerUser(name: string, email: string, password: string) {
-
   const existingUser = await prisma.user.findUnique({
-    where: { email }
+    where: { email },
   });
 
   if (existingUser) {
-    throw new AppError(409, "Email is already registered.");
+    throw new AppError(409, 'Email is already registered.');
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
 
   const user = await prisma.user.create({
     data: {
-      name, email, passwordHash
+      name,
+      email,
+      passwordHash,
     },
     select: {
-      id: true, name: true, email: true, role: true, createdAt: true
-    }
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      createdAt: true,
+    },
   });
   return user;
-
-};
+}
 
 export async function loginUser(email: string, password: string) {
-
   const user = await prisma.user.findUnique({
-    where: { email, deletedAt: null }
+    where: { email, deletedAt: null },
   });
 
   if (!user) {
-    throw new AppError(401, "Invalid email or password");
+    throw new AppError(401, 'Invalid email or password');
   }
 
   const passwordMatches = await bcrypt.compare(password, user?.passwordHash);
 
   if (!passwordMatches) {
-    throw new AppError(401, "Invalid email or password");
+    throw new AppError(401, 'Invalid email or password');
   }
 
   return { id: user.id, name: user.name, email, role: user.role };
-};
+}
