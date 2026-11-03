@@ -63,7 +63,7 @@ export async function deleteMeService(userId: string) {
         throw new AppError(404, "User not found");
       }
 
-      if (user.role !== 'USER') {
+      if (user.role === 'ORGANIZER') {
         const upcomingEvent = await tx.event.findFirst({
           where: { organizerId: userId, status: "PUBLISHED", endsAt: { gt: now } },
           select: { id: true },
