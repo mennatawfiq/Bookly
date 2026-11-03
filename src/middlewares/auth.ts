@@ -103,7 +103,7 @@ export const requireOwnership = <T extends Record<string, unknown>>(config: Requ
     const user = req.user;
 
     if (!user) {
-      throw new AppError(401, "Authenication required");
+      throw new AppError(401, "Authentication required");
     }
 
     if (config.alsoAllow && await config.alsoAllow(resource, user)) {
