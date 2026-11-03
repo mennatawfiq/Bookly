@@ -14,6 +14,22 @@ export default defineConfig([
     languageOptions: {
       globals: globals.node,
     },
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+      '@typescript-eslint/no-namespace': [
+        'error',
+        {
+          allowDeclarations: true,
+        },
+      ],
+    },
   },
   prettier, // should come last so that its configuration overrides earlier conflicting rules
 ]);
