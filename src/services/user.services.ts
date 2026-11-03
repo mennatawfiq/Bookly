@@ -54,17 +54,20 @@ export async function deleteMeService(userId: string) {
     const user = users[0];
 
     if (!user) {
-      throw new AppError(404, "User not found");
+      throw new AppError(404, 'User not found');
     }
 
     if (user.role === 'ORGANIZER') {
       const upcomingEvent = await tx.event.findFirst({
-        where: { organizerId: userId, status: "PUBLISHED", endsAt: { gt: now } },
+        where: { organizerId: userId, status: 'PUBLISHED', endsAt: { gt: now } },
         select: { id: true },
       });
 
       if (upcomingEvent) {
-        throw new AppError(409, "You can't delete your account while having upcoming or running events");
+        throw new AppError(
+          409,
+          "You can't delete your account while having upcoming or running events",
+        );
       }
     }
 

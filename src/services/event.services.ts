@@ -1,13 +1,12 @@
-import { Prisma } from "../../prisma/generated/client";
-import { BookingStatus, EventStatus, TicketTypeKind } from "../../prisma/generated/enums";
-import { AppError } from "../errorhandling/appError";
-import prisma from "../lib/prisma";
-import { CheckInInfo, CreateEventInput, PatchEventInput } from "../schemas/event.schema";
-import { CreateTicketTypeInput, PatchTicketTypeInput } from "../schemas/ticketType.schema";
-import { AuthenticatedUser } from "../types/auth";
-import { buildPagination } from "../utils/pagination.util";
-import { cancelBookingsInTx } from "./booking.services";
-
+import { Prisma } from '../../prisma/generated/client';
+import { BookingStatus, EventStatus, TicketTypeKind } from '../../prisma/generated/enums';
+import { AppError } from '../errorhandling/appError';
+import prisma from '../lib/prisma';
+import { CheckInInfo, CreateEventInput, PatchEventInput } from '../schemas/event.schema';
+import { CreateTicketTypeInput, PatchTicketTypeInput } from '../schemas/ticketType.schema';
+import { AuthenticatedUser } from '../types/auth';
+import { buildPagination } from '../utils/pagination.util';
+import { cancelBookingsInTx } from './booking.services';
 
 const eventSummarySelect = {
   id: true,
@@ -31,11 +30,11 @@ export async function getEventsService(
 ) {
   let where: Prisma.EventWhereInput;
 
-  if (status === "PUBLISHED") {
+  if (status === 'PUBLISHED') {
     where = { status };
   } else if (!user) {
-    throw new AppError(401, "Authentication required to filter by this status");
-  } else if (user.role === "ADMIN") {
+    throw new AppError(401, 'Authentication required to filter by this status');
+  } else if (user.role === 'ADMIN') {
     where = { status };
   } else {
     where = { status, organizerId: user.id };
@@ -63,14 +62,18 @@ export async function getEventsService(
   return { events, pagination: buildPagination(page, limit, totalItems) };
 }
 
-export async function getMyEventsService(page: number, limit: number, userId: string, status?: EventStatus) {
-
+export async function getMyEventsService(
+  page: number,
+  limit: number,
+  userId: string,
+  status?: EventStatus,
+) {
   const where = status ? { organizerId: userId, status } : { organizerId: userId };
 
   const [events, totalItems] = await prisma.$transaction([
     prisma.event.findMany({
       where,
-      orderBy: [{ startsAt: "asc" }, { id: "desc" }],
+      orderBy: [{ startsAt: 'asc' }, { id: 'desc' }],
       skip: (page - 1) * limit,
       take: limit,
     }),
@@ -78,23 +81,17 @@ export async function getMyEventsService(page: number, limit: number, userId: st
   ]);
 
   return { events, pagination: buildPagination(page, limit, totalItems) };
-
 }
 
-const canViewEvent = (event: { organizerId: string, status: string }, user?: AuthenticatedUser) => {
-  return (event.status === "PUBLISHED" || user?.role === "ADMIN" || event.organizerId === user?.id);
-}
+const canViewEvent = (event: { organizerId: string; status: string }, user?: AuthenticatedUser) => {
+  return event.status === 'PUBLISHED' || user?.role === 'ADMIN' || event.organizerId === user?.id;
+};
 
-export async function getEventService(
-  page: number,
-  limit: number,
-  userId: string,
-  status?: EventStatus,
-) {
+export async function getEventService(eventId: string, user?: AuthenticatedUser) {
   const event = await prisma.event.findUnique({
     where: {
-      id: eventId
-    },          // no status filter anymore
+      id: eventId,
+    }, // no status filter anymore
     select: {
       id: true,
       organizerId: true,
@@ -108,12 +105,12 @@ export async function getEventService(
       updatedAt: true,
       ticketTypes: {
         select: ticketTypeSummarySelect,
-      }
-    }
+      },
+    },
   });
 
   if (!event || !canViewEvent(event, user)) {
-    throw new AppError(404, "Event not found")
+    throw new AppError(404, 'Event not found');
   }
 
   return event;
@@ -123,172 +120,171 @@ export async function postEventService(eventInfo: CreateEventInput, organizerId:
   const event = await prisma.event.create({
     data: {
       organizerId: organizerId,
-      status: "DRAFT",
+      status: 'DRAFT',
       title: eventInfo.title,
       description: eventInfo.description,
       location: eventInfo.location,
       startsAt: new Date(eventInfo.startsAt),
       endsAt: new Date(eventInfo.endsAt),
     },
-    select: eventSummarySelect
+    select: eventSummarySelect,
   });
 
   return event;
 }
 
 export async function patchEventService(eventId: string, eventInfo: PatchEventInput) {
-  return await prisma.$transaction(
-    async (tx) => {
+  return await prisma.$transaction(async (tx) => {
+    const eventRows = await tx.$queryRaw<
+      { id: string; status: EventStatus; startsAt: Date; endsAt: Date }[]
+    >`SELECT id, status, "startsAt", "endsAt" FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
 
-      const eventRows = await tx.$queryRaw<{ id: string; status: EventStatus; startsAt: Date; endsAt: Date }[]>
-        `SELECT id, status, "startsAt", "endsAt" FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
+    const existingEvent = eventRows[0];
 
-      const existingEvent = eventRows[0];
+    if (!existingEvent) {
+      throw new AppError(404, 'Event not found');
+    }
 
-      if (!existingEvent) {
-        throw new AppError(404, "Event not found");
-      }
+    if (existingEvent.status !== 'DRAFT') {
+      throw new AppError(409, 'Event cannot be edited');
+    }
 
-      if (existingEvent.status !== "DRAFT") {
-        throw new AppError(409, "Event cannot be edited");
-      }
+    const startsAt = eventInfo.startsAt ? new Date(eventInfo.startsAt) : existingEvent.startsAt;
 
-      const startsAt = eventInfo.startsAt ? new Date(eventInfo.startsAt) : existingEvent.startsAt;
+    const endsAt = eventInfo.endsAt ? new Date(eventInfo.endsAt) : existingEvent.endsAt;
 
-      const endsAt = eventInfo.endsAt ? new Date(eventInfo.endsAt) : existingEvent.endsAt;
+    if (eventInfo.startsAt && startsAt < new Date()) {
+      throw new AppError(400, 'startsAt must be in the future');
+    }
 
-      if (eventInfo.startsAt && startsAt < new Date()) {
-        throw new AppError(400, "startsAt must be in the future");
-      }
+    if (endsAt <= startsAt) {
+      throw new AppError(400, 'endsAt must be after startsAt');
+    }
 
-      if (endsAt <= startsAt) {
-        throw new AppError(400, "endsAt must be after startsAt");
-      }
-
-      const updatedEvent = await tx.event.update({
-        where: { id: eventId },
-        data: {
-          ...(eventInfo.title !== undefined && { title: eventInfo.title, }),
-          ...(eventInfo.description !== undefined && { description: eventInfo.description, }),
-          ...(eventInfo.location !== undefined && { location: eventInfo.location, }),
-          ...(eventInfo.startsAt !== undefined && { startsAt, }),
-          ...(eventInfo.endsAt !== undefined && { endsAt, }),
-        },
-        select: eventSummarySelect
-      });
-
-      return updatedEvent;
+    const updatedEvent = await tx.event.update({
+      where: { id: eventId },
+      data: {
+        ...(eventInfo.title !== undefined && { title: eventInfo.title }),
+        ...(eventInfo.description !== undefined && { description: eventInfo.description }),
+        ...(eventInfo.location !== undefined && { location: eventInfo.location }),
+        ...(eventInfo.startsAt !== undefined && { startsAt }),
+        ...(eventInfo.endsAt !== undefined && { endsAt }),
+      },
+      select: eventSummarySelect,
     });
 
-};
+    return updatedEvent;
+  });
+}
 
 export async function publishEventService(eventId: string) {
   const updatedEvent = await prisma.$transaction(async (tx) => {
-      const eventRows = await tx.$queryRaw<
-          { id: string; status: EventStatus; startsAt: Date }[]
-      >`SELECT id, status, "startsAt" FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
+    const eventRows = await tx.$queryRaw<
+      { id: string; status: EventStatus; startsAt: Date }[]
+    >`SELECT id, status, "startsAt" FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
 
-      const existingEvent = eventRows[0];
+    const existingEvent = eventRows[0];
 
-      if (!existingEvent) {
-        throw new AppError(404, "Event not found");
-      }
-
-      if (existingEvent.status !== "DRAFT") {
-        throw new AppError(409, "Only draft events can be published");
-      }
-
-      if (existingEvent.startsAt <= new Date()) {
-        throw new AppError(409, "This event's start date has passed. Update it before publishing");
-      }
-
-      const ticketTypeCount = await tx.ticketType.count({ where: { eventId } });
-
-      if (ticketTypeCount === 0) {
-        throw new AppError(409, "Add at least one ticket type before publishing");
-      }
-
-      return await tx.event.update({
-        where: { id: eventId },
-        data: {
-          status: "PUBLISHED"
-        },
-        select: eventSummarySelect
-      });
+    if (!existingEvent) {
+      throw new AppError(404, 'Event not found');
     }
-  );
+
+    if (existingEvent.status !== 'DRAFT') {
+      throw new AppError(409, 'Only draft events can be published');
+    }
+
+    if (existingEvent.startsAt <= new Date()) {
+      throw new AppError(409, "This event's start date has passed. Update it before publishing");
+    }
+
+    const ticketTypeCount = await tx.ticketType.count({ where: { eventId } });
+
+    if (ticketTypeCount === 0) {
+      throw new AppError(409, 'Add at least one ticket type before publishing');
+    }
+
+    return await tx.event.update({
+      where: { id: eventId },
+      data: {
+        status: 'PUBLISHED',
+      },
+      select: eventSummarySelect,
+    });
+  });
 
   return updatedEvent;
 }
 
 export async function cancelEventService(eventId: string) {
   await prisma.$transaction(async (tx) => {
-      const eventRows = await tx.$queryRaw<
-            { id: string; status: EventStatus; startsAt: Date }[]
-      >`SELECT id, status, "startsAt" FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
+    const eventRows = await tx.$queryRaw<
+      { id: string; status: EventStatus; startsAt: Date }[]
+    >`SELECT id, status, "startsAt" FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
 
-      const event = eventRows[0];
+    const event = eventRows[0];
 
-      if (!event) {
-        throw new AppError(404, "Event not found");
-      }
-
-      if (event.status === "CANCELLED") {
-        throw new AppError(409, "Cancelled events cannot be modified");
-      }
-
-      if (event.startsAt <= new Date()) {
-        throw new AppError(409, "Event already started");
-      }
-
-      if (event.status === "PUBLISHED") {
-
-        const bookingRows = await tx.$queryRaw<{ id: string }[]>
-          `SELECT id FROM "Booking" WHERE "eventId" = ${eventId} AND status = 'CONFIRMED' FOR UPDATE`;
-
-        const bookingIds = bookingRows.map((b) => b.id);
-
-        const cancelledAt = new Date();
-
-        await cancelBookingsInTx(tx, bookingIds, cancelledAt); // cancels bookings and tickets 
-
-      }
-
-      await tx.event.update({
-        where: { id: eventId },
-        data: { status: "CANCELLED" }
-      });
+    if (!event) {
+      throw new AppError(404, 'Event not found');
     }
-  );
+
+    if (event.status === 'CANCELLED') {
+      throw new AppError(409, 'Cancelled events cannot be modified');
+    }
+
+    if (event.startsAt <= new Date()) {
+      throw new AppError(409, 'Event already started');
+    }
+
+    if (event.status === 'PUBLISHED') {
+      const bookingRows = await tx.$queryRaw<
+        { id: string }[]
+      >`SELECT id FROM "Booking" WHERE "eventId" = ${eventId} AND status = 'CONFIRMED' FOR UPDATE`;
+
+      const bookingIds = bookingRows.map((b) => b.id);
+
+      const cancelledAt = new Date();
+
+      await cancelBookingsInTx(tx, bookingIds, cancelledAt); // cancels bookings and tickets
+    }
+
+    await tx.event.update({
+      where: { id: eventId },
+      data: { status: 'CANCELLED' },
+    });
+  });
 }
 
 export async function postTicketTypeService(
   eventId: string,
   ticketTypeInfo: CreateTicketTypeInput,
 ) {
-  const existingEvent = await prisma.event.findUnique({
-    where: { id: eventId },
+  return await prisma.$transaction(async (tx) => {
+    const eventRows = await tx.$queryRaw<
+      { id: string; status: EventStatus }[]
+    >`SELECT id, status FROM "Event" WHERE id = ${eventId} FOR SHARE`;
+
+    const existingEvent = eventRows[0];
+
+    if (!existingEvent) {
+      throw new AppError(404, 'Event not found');
+    }
+
+    if (existingEvent.status === 'CANCELLED') {
+      throw new AppError(409, 'Only draft or published events can recieve new ticket types');
+    }
+
+    const ticketType = await tx.ticketType.create({
+      data: {
+        eventId: eventId,
+        type: ticketTypeInfo.type,
+        capacity: ticketTypeInfo.capacity,
+        remaining: ticketTypeInfo.capacity,
+      },
+      select: ticketTypeSummarySelect,
+    });
+
+    return ticketType;
   });
-
-  if (!existingEvent) {
-    throw new AppError(404, 'Event not found');
-  }
-
-  if (existingEvent.status === 'CANCELLED') {
-    throw new AppError(409, 'Only draft or published events can recieve new ticket types');
-  }
-
-  const ticketType = await prisma.ticketType.create({
-    data: {
-      eventId: eventId,
-      type: ticketTypeInfo.type,
-      capacity: ticketTypeInfo.capacity,
-      remaining: ticketTypeInfo.capacity,
-    },
-    select: ticketTypeSummarySelect,
-  });
-
-  return ticketType;
 }
 
 export async function patchTicketTypeService(
