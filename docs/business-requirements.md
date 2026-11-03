@@ -24,6 +24,7 @@ Status: v1 API complete, with pagination and automated tests. Roadmap added. Las
 - Automated tests (Vitest + Supertest) on a separate test database, including concurrency tests
 
 **Out of v1** (see sections 9 and 10)
+
 - Prices, payments, and refunds
 - Background jobs (BullMQ)
 - Email or push notifications
@@ -34,15 +35,16 @@ Status: v1 API complete, with pagination and automated tests. Roadmap added. Las
 
 ## 2. Actors and roles
 
-| Role | Who they are | Can do |
-|---|---|---|
-| **User** | Anyone attending events | Browse published events, book tickets (at any event), manage their own bookings, apply to become an organizer |
-| **Organizer** | A user approved to host events | Everything a User can, plus create, edit, publish, and cancel their **own** events, manage their ticket types, see who booked, and check tickets in |
-| **Admin** | Bookly platform staff | Everything a User can, plus: cancel any event, list any event's bookings, view, edit, or cancel any booking, view QR codes of any booking, and review organizer applications. Admins **cannot** create, edit, or publish events, **cannot** manage ticket types, and **cannot** check tickets in. An admin who wants to host events needs a separate organizer account. |
+| Role          | Who they are                   | Can do                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **User**      | Anyone attending events        | Browse published events, book tickets (at any event), manage their own bookings, apply to become an organizer                                                                                                                                                                                                                                                           |
+| **Organizer** | A user approved to host events | Everything a User can, plus create, edit, publish, and cancel their **own** events, manage their ticket types, see who booked, and check tickets in                                                                                                                                                                                                                     |
+| **Admin**     | Bookly platform staff          | Everything a User can, plus: cancel any event, list any event's bookings, view, edit, or cancel any booking, view QR codes of any booking, and review organizer applications. Admins **cannot** create, edit, or publish events, **cannot** manage ticket types, and **cannot** check tickets in. An admin who wants to host events needs a separate organizer account. |
 
 **How a user becomes an organizer:** they submit an application and an admin approves it. Nobody can choose the organizer role for themselves.
 
 **How the first admin is created:** through a seed script (run with `npx tsx scripts/run-seed-admin.ts`, reading `ADMIN_EMAIL` and `ADMIN_PASSWORD` from `.env`), never through the public API. Registration always creates a `USER`. The seed script:
+
 - validates `ADMIN_PASSWORD` with the same password rule as registration;
 - is safe to run again: if the email already exists, nothing changes (the password is never changed by re-running it).
 
@@ -267,6 +269,7 @@ Bookly never hard-deletes business records: users are anonymized, events and boo
   5. the booking is created and one ticket is issued per spot, each with its own random `code`.
 
   If any type lacks stock, the first loop fails the whole booking and nothing changes.
+
 - **BR-B4:** A user can have at most one `CONFIRMED` booking per event, enforced by the partial unique index and a check that gives a clear `409`.
 - **BR-B5:** While the event has not started, the booking's owner can:
   - **add tickets** with `PATCH /bookings/:bookingId/tickets`. The body gives the **new total per type** (so repeating the same request is safe). A total lower than what the booking already holds is rejected with `409`. The request is checked against stock (`409`) and against the 10-ticket cap of the whole booking (`400`). A type the event does not offer returns `400`.
@@ -326,10 +329,10 @@ Rows of the same table are locked together in one query with `ORDER BY id`.
 
 **Event lock kinds**
 
-| Lock | Used by | Why |
-|---|---|---|
-| `FOR SHARE` | create booking, add tickets, cancel ticket, cancel booking, account deletion, add ticket type | Many booking changes can run together, but they wait for event changes |
-| `FOR UPDATE` | publish, edit draft event, cancel event, patch and delete ticket type | These change the event or its structure, so they wait for bookings and for each other |
+| Lock         | Used by                                                                                       | Why                                                                                   |
+| ------------ | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `FOR SHARE`  | create booking, add tickets, cancel ticket, cancel booking, account deletion, add ticket type | Many booking changes can run together, but they wait for event changes                |
+| `FOR UPDATE` | publish, edit draft event, cancel event, patch and delete ticket type                         | These change the event or its structure, so they wait for bookings and for each other |
 
 **Rules**
 
@@ -346,40 +349,41 @@ Rows of the same table are locked together in one query with `ORDER BY id`.
 
 All list endpoints are paginated (section 3).
 
-| Actor | Action | Endpoint | Guard |
-|---|---|---|---|
-| Anyone | Register / log in | `POST /auth/register`, `POST /auth/login` | none |
-| Any user | View my profile | `GET /users/me` | `authenticate` |
-| Any user | Delete my account | `DELETE /users/me` | `authenticate` |
-| Admin | List users (`?role=`) | `GET /users` | `authenticate`, `authorize("ADMIN")` |
-| User | Apply to be an organizer | `POST /organizer-applications` | `authenticate`, `authorize("USER")` |
-| Any user | View own applications | `GET /organizer-applications/mine` | `authenticate` |
-| Owner, Admin | View one application | `GET /organizer-applications/:applicationId` | `authenticate`, `requireOwnership` |
-| Admin | List applications (`?status=`) | `GET /organizer-applications` | `authenticate`, `authorize("ADMIN")` |
-| Admin | Approve / reject | `POST /organizer-applications/:applicationId/approve`, `/reject` | `authenticate`, `authorize("ADMIN")` |
-| Anyone | List published events (`?status=` needs login, see BR-E11) | `GET /events` | optional authentication |
-| Organizer | List my events (`?status=`) | `GET /events/mine` | `authenticate`, `authorize("ORGANIZER")` |
-| Anyone | View one event | `GET /events/:eventId` | optional authentication |
-| Organizer | Create event | `POST /events` | `authenticate`, `authorize("ORGANIZER")` |
-| Owner organizer | Edit event (draft only) | `PATCH /events/:eventId` | `authenticate`, `authorize("ORGANIZER")`, `requireOwnership` |
-| Owner organizer | Publish event | `POST /events/:eventId/publish` | `authenticate`, `authorize("ORGANIZER")`, `requireOwnership` |
-| Owner organizer, Admin | Cancel event | `POST /events/:eventId/cancel` | `authenticate`, `authorize("ORGANIZER", "ADMIN")`, `requireOwnership` |
-| Owner organizer | Add ticket type | `POST /events/:eventId/ticket-types` | `authenticate`, `authorize("ORGANIZER")`, `requireOwnership` |
-| Owner organizer | Edit ticket type | `PATCH /events/:eventId/ticket-types/:ticketTypeId` | `authenticate`, `authorize("ORGANIZER")`, `requireOwnership` |
-| Owner organizer | Delete ticket type | `DELETE /events/:eventId/ticket-types/:ticketTypeId` | `authenticate`, `authorize("ORGANIZER")`, `requireOwnership` |
-| Owner organizer, Admin | List an event's bookings (`?status=`) | `GET /events/:eventId/bookings` | `authenticate`, `authorize("ORGANIZER", "ADMIN")`, `requireOwnership` |
-| Any user | Book tickets | `POST /events/:eventId/bookings` | `authenticate` |
-| Owner organizer | Check a ticket in | `POST /events/:eventId/check-ins` (body: `code`) | `authenticate`, `authorize("ORGANIZER")`, `requireOwnership` |
-| Admin | List all bookings (`?status=`) | `GET /bookings` | `authenticate`, `authorize("ADMIN")` |
-| Any user | List my bookings (`?status=`) | `GET /bookings/mine` | `authenticate` |
-| Owner, Event organizer, Admin | View one booking | `GET /bookings/:bookingId` | `authenticate`, `requireOwnership` with `alsoAllow` |
-| Owner, Admin | View a booking's tickets and QR codes | `GET /bookings/:bookingId/tickets` | `authenticate`, `requireOwnership` |
-| Owner, Admin | Add tickets (new totals, increase only) | `PATCH /bookings/:bookingId/tickets` | `authenticate`, `requireOwnership` |
-| Owner, Admin | Cancel one ticket | `POST /bookings/:bookingId/tickets/:ticketId/cancel` | `authenticate`, `requireOwnership` |
-| Owner, Admin | Cancel a booking | `POST /bookings/:bookingId/cancel` | `authenticate`, `requireOwnership` |
+| Actor                         | Action                                                     | Endpoint                                                         | Guard                                                                 |
+| ----------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Anyone                        | Register / log in                                          | `POST /auth/register`, `POST /auth/login`                        | none                                                                  |
+| Any user                      | View my profile                                            | `GET /users/me`                                                  | `authenticate`                                                        |
+| Any user                      | Delete my account                                          | `DELETE /users/me`                                               | `authenticate`                                                        |
+| Admin                         | List users (`?role=`)                                      | `GET /users`                                                     | `authenticate`, `authorize("ADMIN")`                                  |
+| User                          | Apply to be an organizer                                   | `POST /organizer-applications`                                   | `authenticate`, `authorize("USER")`                                   |
+| Any user                      | View own applications                                      | `GET /organizer-applications/mine`                               | `authenticate`                                                        |
+| Owner, Admin                  | View one application                                       | `GET /organizer-applications/:applicationId`                     | `authenticate`, `requireOwnership`                                    |
+| Admin                         | List applications (`?status=`)                             | `GET /organizer-applications`                                    | `authenticate`, `authorize("ADMIN")`                                  |
+| Admin                         | Approve / reject                                           | `POST /organizer-applications/:applicationId/approve`, `/reject` | `authenticate`, `authorize("ADMIN")`                                  |
+| Anyone                        | List published events (`?status=` needs login, see BR-E11) | `GET /events`                                                    | optional authentication                                               |
+| Organizer                     | List my events (`?status=`)                                | `GET /events/mine`                                               | `authenticate`, `authorize("ORGANIZER")`                              |
+| Anyone                        | View one event                                             | `GET /events/:eventId`                                           | optional authentication                                               |
+| Organizer                     | Create event                                               | `POST /events`                                                   | `authenticate`, `authorize("ORGANIZER")`                              |
+| Owner organizer               | Edit event (draft only)                                    | `PATCH /events/:eventId`                                         | `authenticate`, `authorize("ORGANIZER")`, `requireOwnership`          |
+| Owner organizer               | Publish event                                              | `POST /events/:eventId/publish`                                  | `authenticate`, `authorize("ORGANIZER")`, `requireOwnership`          |
+| Owner organizer, Admin        | Cancel event                                               | `POST /events/:eventId/cancel`                                   | `authenticate`, `authorize("ORGANIZER", "ADMIN")`, `requireOwnership` |
+| Owner organizer               | Add ticket type                                            | `POST /events/:eventId/ticket-types`                             | `authenticate`, `authorize("ORGANIZER")`, `requireOwnership`          |
+| Owner organizer               | Edit ticket type                                           | `PATCH /events/:eventId/ticket-types/:ticketTypeId`              | `authenticate`, `authorize("ORGANIZER")`, `requireOwnership`          |
+| Owner organizer               | Delete ticket type                                         | `DELETE /events/:eventId/ticket-types/:ticketTypeId`             | `authenticate`, `authorize("ORGANIZER")`, `requireOwnership`          |
+| Owner organizer, Admin        | List an event's bookings (`?status=`)                      | `GET /events/:eventId/bookings`                                  | `authenticate`, `authorize("ORGANIZER", "ADMIN")`, `requireOwnership` |
+| Any user                      | Book tickets                                               | `POST /events/:eventId/bookings`                                 | `authenticate`                                                        |
+| Owner organizer               | Check a ticket in                                          | `POST /events/:eventId/check-ins` (body: `code`)                 | `authenticate`, `authorize("ORGANIZER")`, `requireOwnership`          |
+| Admin                         | List all bookings (`?status=`)                             | `GET /bookings`                                                  | `authenticate`, `authorize("ADMIN")`                                  |
+| Any user                      | List my bookings (`?status=`)                              | `GET /bookings/mine`                                             | `authenticate`                                                        |
+| Owner, Event organizer, Admin | View one booking                                           | `GET /bookings/:bookingId`                                       | `authenticate`, `requireOwnership` with `alsoAllow`                   |
+| Owner, Admin                  | View a booking's tickets and QR codes                      | `GET /bookings/:bookingId/tickets`                               | `authenticate`, `requireOwnership`                                    |
+| Owner, Admin                  | Add tickets (new totals, increase only)                    | `PATCH /bookings/:bookingId/tickets`                             | `authenticate`, `requireOwnership`                                    |
+| Owner, Admin                  | Cancel one ticket                                          | `POST /bookings/:bookingId/tickets/:ticketId/cancel`             | `authenticate`, `requireOwnership`                                    |
+| Owner, Admin                  | Cancel a booking                                           | `POST /bookings/:bookingId/cancel`                               | `authenticate`, `requireOwnership`                                    |
 
 **Implementation notes**
-- `GET /events/:eventId` uses *optional* authentication, so a logged-in organizer can still see their own draft (BR-E4) while anonymous visitors get a 404 for it. A broken token on this route still returns `401`.
+
+- `GET /events/:eventId` uses _optional_ authentication, so a logged-in organizer can still see their own draft (BR-E4) while anonymous visitors get a 404 for it. A broken token on this route still returns `401`.
 - `/mine` routes are declared before `/:id` routes, or Express would treat `mine` as an id.
 - Check-in is scoped to the event, so `requireOwnership` works on the event. The service then verifies the scanned ticket belongs to that event.
 - There is no top-level `/tickets` route. Tickets are always reached through their booking.
@@ -393,39 +397,39 @@ The plan is in three parts. Each part is about 3 weeks. Inside a part, the order
 
 ### Part 1: make it production-shaped (about 3 weeks)
 
-| Step | What | Notes |
-|---|---|---|
-| 1 | **Lint and format** | ESLint + Prettier. About half a day. |
-| 2 | **Docker + docker-compose** | App + Postgres now, Redis later. |
-| 3 | **GitHub Actions** | Typecheck, lint, and tests (with a Postgres service). Needs steps 1 and 2 to have something to run. |
-| 4 | **Security basics** | `helmet`, CORS, rate limit on `/auth/login` and `/auth/register`, environment validation with Zod. Also, login must take about the same time for an unknown email as for a wrong password, so response time does not reveal which emails exist. |
-| 5 | **Observability** | Structured logs, a request id on every request, and a `GET /health` endpoint. |
-| 6 | **README** | Written last, so it matches reality. |
+| Step | What                        | Notes                                                                                                                                                                                                                                           |
+| ---- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | **Lint and format**         | ESLint + Prettier. About half a day.                                                                                                                                                                                                            |
+| 2    | **Docker + docker-compose** | App + Postgres now, Redis later.                                                                                                                                                                                                                |
+| 3    | **GitHub Actions**          | Typecheck, lint, and tests (with a Postgres service). Needs steps 1 and 2 to have something to run.                                                                                                                                             |
+| 4    | **Security basics**         | `helmet`, CORS, rate limit on `/auth/login` and `/auth/register`, environment validation with Zod. Also, login must take about the same time for an unknown email as for a wrong password, so response time does not reveal which emails exist. |
+| 5    | **Observability**           | Structured logs, a request id on every request, and a `GET /health` endpoint.                                                                                                                                                                   |
+| 6    | **README**                  | Written last, so it matches reality.                                                                                                                                                                                                            |
 
 Choices in this part:
 
-| Topic | Naive | Production-ready | Trade-off |
-|---|---|---|---|
-| Logging | `console.log` + morgan | Structured JSON logs (for example pino) with request ids | Naive is zero work but hard to search. Structured needs setup but is searchable. |
-| Rate limiting | In-memory counter | Redis-backed limiter | In-memory breaks when two servers run. Redis works across servers but adds a dependency. |
+| Topic         | Naive                  | Production-ready                                         | Trade-off                                                                                |
+| ------------- | ---------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Logging       | `console.log` + morgan | Structured JSON logs (for example pino) with request ids | Naive is zero work but hard to search. Structured needs setup but is searchable.         |
+| Rate limiting | In-memory counter      | Redis-backed limiter                                     | In-memory breaks when two servers run. Redis works across servers but adds a dependency. |
 
 ### Part 2: Redis, jobs, notifications, payments (about 3 weeks)
 
-| Step | What | Notes |
-|---|---|---|
-| 1 | **Redis + caching** | First, because BullMQ needs Redis. |
-| 2 | **Background jobs (BullMQ)** | The first job is the stored `COMPLETED` event state (section 10). |
-| 3 | **Retries** | Comes with jobs: backoff and a dead-letter queue. |
-| 4 | **Notifications (email)** | Sent from a job, never inside the request. |
-| 5 | **Idempotency** | Learned right before payments, where it matters most. |
-| 6 | **Payment gateway** | Test mode only, with webhooks. It is the biggest topic. If time runs short, cut it down to "create a payment + handle one webhook". |
+| Step | What                         | Notes                                                                                                                               |
+| ---- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | **Redis + caching**          | First, because BullMQ needs Redis.                                                                                                  |
+| 2    | **Background jobs (BullMQ)** | The first job is the stored `COMPLETED` event state (section 10).                                                                   |
+| 3    | **Retries**                  | Comes with jobs: backoff and a dead-letter queue.                                                                                   |
+| 4    | **Notifications (email)**    | Sent from a job, never inside the request.                                                                                          |
+| 5    | **Idempotency**              | Learned right before payments, where it matters most.                                                                               |
+| 6    | **Payment gateway**          | Test mode only, with webhooks. It is the biggest topic. If time runs short, cut it down to "create a payment + handle one webhook". |
 
 Choices in this part:
 
-| Topic | Naive | Production-ready | Trade-off |
-|---|---|---|---|
+| Topic   | Naive                  | Production-ready                         | Trade-off                                                                                                |
+| ------- | ---------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | Caching | Cache in a JS variable | Redis with expiry (TTL) and invalidation | A variable is simple but lost on restart. Redis is shared, but you must decide when to clear stale data. |
-| Jobs | `setInterval` | BullMQ | `setInterval` dies with the server and runs twice with two servers. BullMQ is reliable but needs Redis. |
+| Jobs    | `setInterval`          | BullMQ                                   | `setInterval` dies with the server and runs twice with two servers. BullMQ is reliable but needs Redis.  |
 
 ### Part 3 (optional): auth upgrades
 
@@ -437,18 +441,21 @@ Choices in this part:
 ## 10. Deferred / future work
 
 **Completed-event state via background job** (Part 2, step 2)
-- *What:* Stored `COMPLETED` status, updated automatically when an event ends.
-- *Why deferred:* Needs a job queue (BullMQ). In v1 "past" is derived from `endsAt < now`.
-- *What it changes:* A scheduled job and a `COMPLETED` enum value, and simpler date queries.
+
+- _What:_ Stored `COMPLETED` status, updated automatically when an event ends.
+- _Why deferred:_ Needs a job queue (BullMQ). In v1 "past" is derived from `endsAt < now`.
+- _What it changes:_ A scheduled job and a `COMPLETED` enum value, and simpler date queries.
 
 **Notifications** (Part 2, step 4)
-- *What:* Emails or push messages for booking confirmation, event cancellation, and application decisions. Sent through background jobs.
-- *Related:* When notifications exist, editing a published event (BR-E5) can be revisited: attendees would be told about changes and could cancel their booking.
+
+- _What:_ Emails or push messages for booking confirmation, event cancellation, and application decisions. Sent through background jobs.
+- _Related:_ When notifications exist, editing a published event (BR-E5) can be revisited: attendees would be told about changes and could cancel their booking.
 
 **Payments with a real gateway** (Part 2, step 6)
-- *What:* Paid tickets, prices on ticket types, a payment step in the booking flow.
-- *What it changes:* Price fields on `TicketType`, payment records, and a `PENDING_PAYMENT` booking state with expiring reservations. Needs idempotency first (Part 2, step 5).
-- *Testing note:* A fault-injection test (force a failure in the middle of a booking and check that everything rolls back) is left for when payments are added.
+
+- _What:_ Paid tickets, prices on ticket types, a payment step in the booking flow.
+- _What it changes:_ Price fields on `TicketType`, payment records, and a `PENDING_PAYMENT` booking state with expiring reservations. Needs idempotency first (Part 2, step 5).
+- _Testing note:_ A fault-injection test (force a failure in the middle of a booking and check that everything rolls back) is left for when payments are added.
 
 **Refunds when tickets are cancelled**
 
@@ -468,6 +475,7 @@ Choices in this part:
 - _What:_ `PATCH /users/me` to change name or password.
 
 **Known limitations**
+
 - Event title, description, and location have no minimum length (BR-E12).
 - A user who is approved as organizer cannot apply again, and there is no way to return to the `USER` role in v1.
 - Two admins deleting their accounts at the same moment could both pass the "last admin" check.

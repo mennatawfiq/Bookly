@@ -5,7 +5,7 @@ import { generateAccessToken } from '../utils/jwt.util';
 
 export const register = async (
   req: Request<Record<string, never>, Record<string, never>, RegisterInput>,
-  res: Response
+  res: Response,
 ) => {
   const { name, email, password } = req.body;
 

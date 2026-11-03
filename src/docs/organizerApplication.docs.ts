@@ -12,6 +12,7 @@ import {
   RejectApplicationRequest,
 } from './components';
 import { ListApplicationsQuerySchema } from '../schemas/organizerApplication.schema';
+import { OffsetPaginationQuerySchema } from '../schemas/pagination.schema';
 
 registry.registerPath({
   method: 'post',
@@ -50,10 +51,10 @@ registry.registerPath({
   security: [{ [bearerAuth.name]: [] }],
   request: { query: OffsetPaginationQuerySchema },
   responses: {
-    200: jsonResponse("List of your applications", MyApplicationsSuccess),
-    400: jsonResponse("Invalid pagination value", ValidationFailResponse),
-    401: jsonResponse("Missing, invalid, or expired token", MessageFailResponse),
-    500: jsonResponse("Internal server error", ServerErrorResponse),
+    200: jsonResponse('List of your applications', MyApplicationsSuccess),
+    400: jsonResponse('Invalid pagination value', ValidationFailResponse),
+    401: jsonResponse('Missing, invalid, or expired token', MessageFailResponse),
+    500: jsonResponse('Internal server error', ServerErrorResponse),
   },
 });
 
