@@ -1,6 +1,6 @@
 # Bookly: Business Requirements (v1)
 
-Status: final draft (v1 API complete). Last updated 2026-10-25.
+Status: v1 API complete, with pagination and automated tests. Roadmap added. Last updated 2026-11-03.
 
 ---
 
@@ -18,36 +18,38 @@ Status: final draft (v1 API complete). Last updated 2026-10-25.
 - Each spot is issued as an individual ticket with its own QR code
 - Organizers check tickets in at the door by scanning the QR code
 - Capacity is enforced per ticket type: a type can never have more tickets issued than its capacity
-- Admins can moderate any event or booking (except check-in, see BR-C1)
+- Admins can moderate: cancel any event, see any event's bookings, and view or cancel any booking. They cannot create, edit, or publish events, manage ticket types, or check tickets in (see section 2)
 - Users can delete (anonymize) their own account
+- Offset pagination on every list endpoint
+- Automated tests (Vitest + Supertest) on a separate test database, including concurrency tests
 
-**Out of v1** (see section 7)
-
+**Out of v1** (see sections 9 and 10)
 - Prices, payments, and refunds
 - Background jobs (BullMQ)
 - Email or push notifications
 - Waitlists, recurring events, ticket transfers
 - Advanced search and recommendations
-- Pagination (planned right after v1)
 
 ---
 
 ## 2. Actors and roles
 
-| Role          | Who they are                   | Can do                                                                                                                           |
-| ------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| **User**      | Anyone attending events        | Browse published events, book tickets (at any event), manage their own bookings, apply to become an organizer                    |
-| **Organizer** | A user approved to host events | Everything a User can, plus create and manage their **own** events and ticket types, see who booked them, and check tickets in   |
-| **Admin**     | Bookly platform staff          | Everything a User can, plus moderate any event or booking and review organizer applications. Admins **cannot** check tickets in. |
+| Role | Who they are | Can do |
+|---|---|---|
+| **User** | Anyone attending events | Browse published events, book tickets (at any event), manage their own bookings, apply to become an organizer |
+| **Organizer** | A user approved to host events | Everything a User can, plus create, edit, publish, and cancel their **own** events, manage their ticket types, see who booked, and check tickets in |
+| **Admin** | Bookly platform staff | Everything a User can, plus: cancel any event, list any event's bookings, view, edit, or cancel any booking, view QR codes of any booking, and review organizer applications. Admins **cannot** create, edit, or publish events, **cannot** manage ticket types, and **cannot** check tickets in. An admin who wants to host events needs a separate organizer account. |
 
 **How a user becomes an organizer:** they submit an application and an admin approves it. Nobody can choose the organizer role for themselves.
 
-**How the first admin is created:** through a seed script (`npm run seed:admin`, reading `ADMIN_EMAIL` and `ADMIN_PASSWORD` from `.env`), never through the public API. Registration always creates a `USER`.
+**How the first admin is created:** through a seed script (run with `npx tsx scripts/run-seed-admin.ts`, reading `ADMIN_EMAIL` and `ADMIN_PASSWORD` from `.env`), never through the public API. Registration always creates a `USER`. The seed script:
+- validates `ADMIN_PASSWORD` with the same password rule as registration;
+- is safe to run again: if the email already exists, nothing changes (the password is never changed by re-running it).
 
 **Authorization model:** two checks, applied in order.
 
 1. **Role check** (`authorize`): is this kind of user allowed to use this endpoint at all?
-2. **Ownership check** (`requireOwnership`): does this specific resource belong to them? Admins always bypass this check. A route can add an extra rule (`alsoAllow`) that grants access to non-owners. It is used only on `GET /bookings/:bookingId`, so the organizer of the booking's event can read it.
+2. **Ownership check** (`requireOwnership`): does this specific resource belong to them? Admins always bypass this check, but only on routes where the role check lets them in. A route can add an extra rule (`alsoAllow`) that grants access to non-owners. It is used only on `GET /bookings/:bookingId`, so the organizer of the booking's event can read it.
 
 **Existence policy:** when a resource does not exist **or** is not owned by the requester, the API returns the same `404` with the same message, so the response never reveals that a resource exists.
 
@@ -61,7 +63,10 @@ Status: final draft (v1 API complete). Last updated 2026-10-25.
 - **Empty success:** `204` with no body (cancel, delete) or `200` with data.
 - **No hard deletes of business records:** there are no delete routes for events, bookings, or tickets. Cancelling is the end of the lifecycle. The only delete route is for ticket types (BR-T5).
 - **Dates:** ISO 8601 strings.
+- **Pagination:** every list endpoint takes `page` (default 1) and `limit` (default 10, maximum 100). The response has the items plus a `pagination` object: `page`, `limit`, `totalItems`, `totalPages`, `hasNextPage`, `hasPreviousPage`. A page after the last one returns an empty list, not an error. Lists are sorted newest first (`createdAt` descending, then `id`). Exceptions: the public event list is sorted by `startsAt` descending, and `GET /events/mine` by `startsAt` ascending.
+- **Filters:** `status` on events, bookings, and applications; `role` on users. An invalid value returns `400`.
 - **Docs:** the OpenAPI document is generated from the Zod schemas. It is served at `/api-docs` and `/openapi.json`.
+- **Tests:** Vitest + Supertest, running against a separate database (`event_booking_test`). The test setup refuses to run against any other database.
 
 ---
 
@@ -221,20 +226,22 @@ Bookly never hard-deletes business records: users are anonymized, events and boo
 - **BR-A7:** `organizationName` (2 to 100 characters) and `description` (20 to 1000 characters) are required, validated with Zod.
 - **BR-A8:** Rejecting requires a `reviewNote`. Approving does not.
 - **BR-A9:** A user whose application was rejected can apply again only after 3 days from the rejection (`reviewedAt`).
-- **BR-A10:** Deleting an account rejects the user's `PENDING` application (BR-U3).
+- **BR-A10:** Deleting an account rejects the user's `PENDING` application (BR-U3). The approve step also checks `deletedAt` as a safety net, so an application of a deleted user can never be approved.
 
 ### 6.2 Events
 
-- **BR-E1:** Only organizers and admins can create events. A new event always starts as `DRAFT`.
-- **BR-E2:** `startsAt` is in the future when creating, and `endsAt` is after `startsAt`.
-- **BR-E3:** Publishing requires `startsAt` to be in the future and at least one ticket type.
+- **BR-E1:** Only organizers can create events. Admins cannot. A new event always starts as `DRAFT`.
+- **BR-E2:** `startsAt` is in the future when creating (and when edited), and `endsAt` is after `startsAt`.
+- **BR-E3:** Publishing is done only by the owning organizer. It requires `startsAt` to be in the future and at least one ticket type.
 - **BR-E4:** Everyone can see `PUBLISHED` events, with no login required. `DRAFT` and `CANCELLED` events are visible only to their organizer and admins. Anyone else gets a 404.
-- **BR-E5:** Only the owning organizer or an admin can edit an event, and **only while it is `DRAFT`**. Published and cancelled events cannot be edited, so attendees who booked are never surprised by a changed date or place.
+- **BR-E5:** Only the owning organizer can edit an event, and **only while it is `DRAFT`**. Published and cancelled events cannot be edited, so attendees who booked are never surprised by a changed date or place.
 - **BR-E6:** `CANCELLED` is final. A cancelled event cannot be published again.
 - **BR-E7:** Booking closes when the event starts, not when it ends.
-- **BR-E8:** A `DRAFT` or `PUBLISHED` event can be cancelled only before it starts. This keeps cancellation from ever colliding with tickets that were already scanned.
-- **BR-E9:** Cancelling an event happens in **one transaction**: the event becomes `CANCELLED`, all its `CONFIRMED` bookings become `CANCELLED`, all their `VALID` tickets become `CANCELLED`, and every ticket type's `remaining` goes back to its `capacity`. Bookings and tickets are kept for history. A draft has no bookings, so for a draft only the status changes.
+- **BR-E8:** A `DRAFT` or `PUBLISHED` event can be cancelled only before it starts, by its owning organizer or by an admin. This keeps cancellation from ever colliding with tickets that were already scanned.
+- **BR-E9:** Cancelling an event happens in **one transaction**: the event becomes `CANCELLED`, all its `CONFIRMED` bookings become `CANCELLED`, all their `VALID` tickets become `CANCELLED`, and every ticket type's `remaining` goes back to its `capacity`. Bookings and tickets are kept for history. A draft has no bookings, so for a draft only the status changes. A published event with no bookings is still cancelled normally.
 - **BR-E10:** An organizer sees all their own events in any status (`GET /events/mine`).
+- **BR-E11:** `GET /events` without `status` returns published events and needs no login. With `status=DRAFT` or `status=CANCELLED` it needs a login: an organizer gets only their own events with that status, and an admin gets all of them. Without a token this returns `401`.
+- **BR-E12:** `title`, `description`, and `location` are trimmed text with no minimum length in v1 (an empty one is allowed).
 
 ### 6.3 Ticket types
 
@@ -242,7 +249,7 @@ Bookly never hard-deletes business records: users are anonymized, events and boo
 - **BR-T2:** When a ticket type is created, `remaining` equals `capacity`.
 - **BR-T3 (invariant):** For every ticket type, at all times, `0 ≤ remaining ≤ capacity` and `remaining = capacity − tickets of that type that are not cancelled` (`VALID` plus `USED`).
 - **BR-T4:** Changing a type's `capacity` changes its `remaining` by the same amount. It is rejected if the new capacity is lower than the active tickets already issued.
-- **BR-T5:** Ticket types can be added, edited, or deleted while the event is `DRAFT` or `PUBLISHED`, never when it is `CANCELLED`. Deleting is blocked in these cases:
+- **BR-T5:** Only the owning organizer can add, edit, or delete ticket types. This is allowed while the event is `DRAFT` or `PUBLISHED`, **including after the event has started**, as long as the capacity and `remaining` rules hold. It is never allowed when the event is `CANCELLED`. Deleting is blocked in these cases:
   - any ticket was ever issued for the type, **even a cancelled one**;
   - it is the only ticket type of a `PUBLISHED` event (a `DRAFT` event may have none).
 - **BR-T6:** The `type` (kind) of a ticket type cannot be changed once tickets were issued for it.
@@ -252,10 +259,17 @@ Bookly never hard-deletes business records: users are anonymized, events and boo
 
 - **BR-B1:** A booking can be created only for a `PUBLISHED` event that has not started yet (BR-E7). Any logged-in user can book, including organizers at their own events and admins.
 - **BR-B2:** A booking request lists one or more ticket types with a positive count for each. Each type appears only once, the **total** is between 1 and 10, and every listed type must belong to the event. Validated with Zod and again in the service.
-- **BR-B3:** A booking succeeds only if every requested type has enough `remaining`. In **one transaction**, the booking is created, one ticket is issued per spot (each with its own random `code`), and each type's `remaining` is decreased. If any type lacks stock, the whole booking fails and nothing changes.
+- **BR-B3:** A booking succeeds only if every requested type has enough `remaining`. In **one transaction**:
+  1. the event row is locked `FOR SHARE` and checked (published, not started);
+  2. the requested ticket type rows are locked `FOR UPDATE`;
+  3. a first loop checks that **every** requested type has enough `remaining`;
+  4. a second loop decreases each type's `remaining` (with `decrement`);
+  5. the booking is created and one ticket is issued per spot, each with its own random `code`.
+
+  If any type lacks stock, the first loop fails the whole booking and nothing changes.
 - **BR-B4:** A user can have at most one `CONFIRMED` booking per event, enforced by the partial unique index and a check that gives a clear `409`.
 - **BR-B5:** While the event has not started, the booking's owner can:
-  - **add tickets** with `PATCH /bookings/:bookingId/tickets`. The body gives the **new total per type** (so repeating the same request is safe). A total lower than what the booking already holds is rejected with `409`. The request is checked against stock and against the 10-ticket cap of the whole booking.
+  - **add tickets** with `PATCH /bookings/:bookingId/tickets`. The body gives the **new total per type** (so repeating the same request is safe). A total lower than what the booking already holds is rejected with `409`. The request is checked against stock (`409`) and against the 10-ticket cap of the whole booking (`400`). A type the event does not offer returns `400`.
   - **cancel one specific `VALID` ticket** of their choice. Each cancelled ticket returns one spot to its type's `remaining`.
 
   Each change is **one transaction**. Reducing tickets is done only by cancelling tickets, so the user decides which QR code stops working.
@@ -273,25 +287,25 @@ Bookly never hard-deletes business records: users are anonymized, events and boo
 
 - **BR-C1:** Only the organizer who owns the event can check tickets in. Admins cannot. The endpoint is scoped to the event, so the ownership check applies to the event.
 - **BR-C2:** A ticket can be checked in only if it belongs to that event, its status is `VALID`, and the event is `PUBLISHED` and in progress (`startsAt ≤ now ≤ endsAt`). Check-in opens when the event starts, and booking changes close at the same moment, so the two never overlap.
-- **BR-C3:** Check-in is one atomic update: `VALID` becomes `USED` only if the ticket is still `VALID`. If two scanners read the same ticket at once, exactly one succeeds and the other gets `409`.
+- **BR-C3:** Check-in is one atomic update: `VALID` becomes `USED` only if the ticket is still `VALID`. If two scanners read the same ticket at once, exactly one succeeds and the others get `409`.
 - **BR-C4:** Check-in records `usedAt` and `checkedInById`. `USED` is final. A used ticket cannot be cancelled or reverted.
-- **BR-C5:** A scan of an unknown code, or of a code that belongs to another event, returns the same `404` (so codes of other events are never revealed). A `CANCELLED` or already `USED` ticket returns `409`. A successful scan returns the ticket type so the scanner can show "VIP" or "GENERAL".
+- **BR-C5:** A scan of an unknown code, or of a code that belongs to another event, returns the same `404` (so codes of other events are never revealed). The event ownership of the ticket is checked **before** its status, so a cancelled ticket of another event also gets the same `404`. A `CANCELLED` or already `USED` ticket of this event returns `409`. A successful scan returns the ticket type so the scanner can show "VIP" or "GENERAL".
 
 ### 6.6 Account deletion
 
 - **BR-U1:** A user can delete their own account (`DELETE /users/me`), whatever their role.
-- **BR-U2:** An organizer or admin with an upcoming or running `PUBLISHED` event (`endsAt` in the future) cannot delete their account until those events are cancelled or have ended. Cancelling an event affects other people, so it must be a deliberate, separate act.
-- **BR-U2b:** The only remaining admin cannot delete their account.
+- **BR-U2:** An organizer with an upcoming or running `PUBLISHED` event (`endsAt` in the future) cannot delete their account until those events are cancelled or have ended. Cancelling an event affects other people, so it must be a deliberate, separate act. Drafts and ended events do not block deletion. (The check is by role, not `USER`, so it also covers an admin who somehow owns events, such as an organizer who was later made an admin.)
+- **BR-U2b:** The only remaining admin cannot delete their account. The check locks the rows of the **other** active admins (`FOR SHARE`), so two admins deleting themselves at the same moment cannot both pass it.
 - **BR-U3:** In **one transaction**, deleting:
   - rejects the user's `PENDING` organizer application (BR-A10);
   - cancels the user's upcoming `CONFIRMED` bookings (events that have not started) through the normal cancellation logic: tickets cancelled, each ticket type's `remaining` restored. No refunds are involved, since v1 has no payments.
-- **BR-U4:** The account is anonymized in the same transaction: name becomes `Deleted user`, email becomes `deleted-<id>@deleted.invalid`, and the password hash becomes a random value that no password can match.
+- **BR-U4:** The account is anonymized in the same transaction: name becomes `Deleted user`, email becomes `deleted-<id>@deleted.invalid`, and the password hash becomes a random value that no password can match. Because the email is replaced, the original email can be registered again as a new account.
 - **BR-U5:** `deletedAt` is set. `authenticate` reads the user from the database on every request and rejects users with `deletedAt` set, so this takes effect immediately, including for tokens already issued. Login also rejects deleted users.
 - **BR-U6:** Past bookings, tickets, events, and applications are kept unchanged and display the user as "Deleted user".
 
 ### 6.7 QR codes
 
-- **BR-Q1:** A ticket's `code` is a cryptographically secure random token of at least 128 bits, unique across all tickets, never sequential and never derived from an id. The implementation uses 16 random bytes encoded as base64url.
+- **BR-Q1:** A ticket's `code` is a cryptographically secure random token of at least 128 bits, unique across all tickets, never sequential and never derived from an id. The implementation uses 16 random bytes encoded as base64url (22 characters).
 - **BR-Q2:** The QR image simply encodes the `code`. Whether a ticket is valid is always decided by the server looking up its status, so a cancelled ticket fails even if its QR image still exists on someone's phone.
 
 ---
@@ -312,10 +326,10 @@ Rows of the same table are locked together in one query with `ORDER BY id`.
 
 **Event lock kinds**
 
-| Lock         | Used by                                                                      | Why                                                                                   |
-| ------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `FOR SHARE`  | create booking, add tickets, cancel ticket, cancel booking, account deletion | Many booking changes can run together, but they wait for event changes                |
-| `FOR UPDATE` | publish, cancel event, patch and delete ticket type                          | These change the event or its structure, so they wait for bookings and for each other |
+| Lock | Used by | Why |
+|---|---|---|
+| `FOR SHARE` | create booking, add tickets, cancel ticket, cancel booking, account deletion, add ticket type | Many booking changes can run together, but they wait for event changes |
+| `FOR UPDATE` | publish, edit draft event, cancel event, patch and delete ticket type | These change the event or its structure, so they wait for bookings and for each other |
 
 **Rules**
 
@@ -330,41 +344,42 @@ Rows of the same table are locked together in one query with `ORDER BY id`.
 
 ## 8. Use cases and endpoints
 
-| Actor                         | Action                                  | Endpoint                                                         | Guard                                                        |
-| ----------------------------- | --------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------ |
-| Anyone                        | Register / log in                       | `POST /auth/register`, `POST /auth/login`                        | none                                                         |
-| Any user                      | View my profile                         | `GET /users/me`                                                  | `authenticate`                                               |
-| Any user                      | Delete my account                       | `DELETE /users/me`                                               | `authenticate`                                               |
-| Admin                         | List users (`?role=`)                   | `GET /users`                                                     | `authenticate`, `authorize("ADMIN")`                         |
-| User                          | Apply to be an organizer                | `POST /organizer-applications`                                   | `authenticate`, `authorize("USER")`                          |
-| Any user                      | View own applications                   | `GET /organizer-applications/mine`                               | `authenticate`                                               |
-| Owner, Admin                  | View one application                    | `GET /organizer-applications/:applicationId`                     | `authenticate`, `requireOwnership`                           |
-| Admin                         | List applications (`?status=`)          | `GET /organizer-applications`                                    | `authenticate`, `authorize("ADMIN")`                         |
-| Admin                         | Approve / reject                        | `POST /organizer-applications/:applicationId/approve`, `/reject` | `authenticate`, `authorize("ADMIN")`                         |
-| Anyone                        | List published events                   | `GET /events`                                                    | none                                                         |
-| Organizer                     | List my events                          | `GET /events/mine`                                               | `authenticate`, `authorize("ORGANIZER")`                     |
-| Anyone                        | View one event                          | `GET /events/:eventId`                                           | optional authentication                                      |
-| Organizer, Admin              | Create event                            | `POST /events`                                                   | `authenticate`, `authorize("ORGANIZER", "ADMIN")`            |
-| Owner, Admin                  | Edit event (draft only)                 | `PATCH /events/:eventId`                                         | `authenticate`, `authorize`, `requireOwnership`              |
-| Owner, Admin                  | Publish event                           | `POST /events/:eventId/publish`                                  | `authenticate`, `authorize`, `requireOwnership`              |
-| Owner, Admin                  | Cancel event                            | `POST /events/:eventId/cancel`                                   | `authenticate`, `authorize`, `requireOwnership`              |
-| Owner, Admin                  | Add ticket type                         | `POST /events/:eventId/ticket-types`                             | `authenticate`, `authorize`, `requireOwnership`              |
-| Owner, Admin                  | Edit ticket type                        | `PATCH /events/:eventId/ticket-types/:ticketTypeId`              | `authenticate`, `authorize`, `requireOwnership`              |
-| Owner, Admin                  | Delete ticket type                      | `DELETE /events/:eventId/ticket-types/:ticketTypeId`             | `authenticate`, `authorize`, `requireOwnership`              |
-| Owner, Admin                  | List an event's bookings                | `GET /events/:eventId/bookings`                                  | `authenticate`, `authorize`, `requireOwnership`              |
-| Any user                      | Book tickets                            | `POST /events/:eventId/bookings`                                 | `authenticate`                                               |
-| Organizer (owner)             | Check a ticket in                       | `POST /events/:eventId/check-ins` (body: `code`)                 | `authenticate`, `authorize("ORGANIZER")`, `requireOwnership` |
-| Admin                         | List all bookings                       | `GET /bookings`                                                  | `authenticate`, `authorize("ADMIN")`                         |
-| Any user                      | List my bookings                        | `GET /bookings/mine`                                             | `authenticate`                                               |
-| Owner, Event organizer, Admin | View one booking                        | `GET /bookings/:bookingId`                                       | `authenticate`, `requireOwnership` with `alsoAllow`          |
-| Owner, Admin                  | View a booking's tickets and QR codes   | `GET /bookings/:bookingId/tickets`                               | `authenticate`, `requireOwnership`                           |
-| Owner, Admin                  | Add tickets (new totals, increase only) | `PATCH /bookings/:bookingId/tickets`                             | `authenticate`, `requireOwnership`                           |
-| Owner, Admin                  | Cancel one ticket                       | `POST /bookings/:bookingId/tickets/:ticketId/cancel`             | `authenticate`, `requireOwnership`                           |
-| Owner, Admin                  | Cancel a booking                        | `POST /bookings/:bookingId/cancel`                               | `authenticate`, `requireOwnership`                           |
+All list endpoints are paginated (section 3).
+
+| Actor | Action | Endpoint | Guard |
+|---|---|---|---|
+| Anyone | Register / log in | `POST /auth/register`, `POST /auth/login` | none |
+| Any user | View my profile | `GET /users/me` | `authenticate` |
+| Any user | Delete my account | `DELETE /users/me` | `authenticate` |
+| Admin | List users (`?role=`) | `GET /users` | `authenticate`, `authorize("ADMIN")` |
+| User | Apply to be an organizer | `POST /organizer-applications` | `authenticate`, `authorize("USER")` |
+| Any user | View own applications | `GET /organizer-applications/mine` | `authenticate` |
+| Owner, Admin | View one application | `GET /organizer-applications/:applicationId` | `authenticate`, `requireOwnership` |
+| Admin | List applications (`?status=`) | `GET /organizer-applications` | `authenticate`, `authorize("ADMIN")` |
+| Admin | Approve / reject | `POST /organizer-applications/:applicationId/approve`, `/reject` | `authenticate`, `authorize("ADMIN")` |
+| Anyone | List published events (`?status=` needs login, see BR-E11) | `GET /events` | optional authentication |
+| Organizer | List my events (`?status=`) | `GET /events/mine` | `authenticate`, `authorize("ORGANIZER")` |
+| Anyone | View one event | `GET /events/:eventId` | optional authentication |
+| Organizer | Create event | `POST /events` | `authenticate`, `authorize("ORGANIZER")` |
+| Owner organizer | Edit event (draft only) | `PATCH /events/:eventId` | `authenticate`, `authorize("ORGANIZER")`, `requireOwnership` |
+| Owner organizer | Publish event | `POST /events/:eventId/publish` | `authenticate`, `authorize("ORGANIZER")`, `requireOwnership` |
+| Owner organizer, Admin | Cancel event | `POST /events/:eventId/cancel` | `authenticate`, `authorize("ORGANIZER", "ADMIN")`, `requireOwnership` |
+| Owner organizer | Add ticket type | `POST /events/:eventId/ticket-types` | `authenticate`, `authorize("ORGANIZER")`, `requireOwnership` |
+| Owner organizer | Edit ticket type | `PATCH /events/:eventId/ticket-types/:ticketTypeId` | `authenticate`, `authorize("ORGANIZER")`, `requireOwnership` |
+| Owner organizer | Delete ticket type | `DELETE /events/:eventId/ticket-types/:ticketTypeId` | `authenticate`, `authorize("ORGANIZER")`, `requireOwnership` |
+| Owner organizer, Admin | List an event's bookings (`?status=`) | `GET /events/:eventId/bookings` | `authenticate`, `authorize("ORGANIZER", "ADMIN")`, `requireOwnership` |
+| Any user | Book tickets | `POST /events/:eventId/bookings` | `authenticate` |
+| Owner organizer | Check a ticket in | `POST /events/:eventId/check-ins` (body: `code`) | `authenticate`, `authorize("ORGANIZER")`, `requireOwnership` |
+| Admin | List all bookings (`?status=`) | `GET /bookings` | `authenticate`, `authorize("ADMIN")` |
+| Any user | List my bookings (`?status=`) | `GET /bookings/mine` | `authenticate` |
+| Owner, Event organizer, Admin | View one booking | `GET /bookings/:bookingId` | `authenticate`, `requireOwnership` with `alsoAllow` |
+| Owner, Admin | View a booking's tickets and QR codes | `GET /bookings/:bookingId/tickets` | `authenticate`, `requireOwnership` |
+| Owner, Admin | Add tickets (new totals, increase only) | `PATCH /bookings/:bookingId/tickets` | `authenticate`, `requireOwnership` |
+| Owner, Admin | Cancel one ticket | `POST /bookings/:bookingId/tickets/:ticketId/cancel` | `authenticate`, `requireOwnership` |
+| Owner, Admin | Cancel a booking | `POST /bookings/:bookingId/cancel` | `authenticate`, `requireOwnership` |
 
 **Implementation notes**
-
-- `GET /events/:eventId` uses _optional_ authentication, so a logged-in organizer can still see their own draft (BR-E4) while anonymous visitors get a 404 for it.
+- `GET /events/:eventId` uses *optional* authentication, so a logged-in organizer can still see their own draft (BR-E4) while anonymous visitors get a 404 for it. A broken token on this route still returns `401`.
 - `/mine` routes are declared before `/:id` routes, or Express would treat `mine` as an id.
 - Check-in is scoped to the event, so `requireOwnership` works on the event. The service then verifies the scanned ticket belongs to that event.
 - There is no top-level `/tickets` route. Tickets are always reached through their booking.
@@ -372,27 +387,68 @@ Rows of the same table are locked together in one query with `ORDER BY id`.
 
 ---
 
-## 9. Deferred / future work
+## 9. Roadmap (after v1)
 
-**Pagination and limits**
+The plan is in three parts. Each part is about 3 weeks. Inside a part, the order matters because later steps depend on earlier ones. For each technical choice, the options are written down with their trade-offs (naive and production-ready), and the decision is made by the project owner.
 
-- _What:_ Pagination for every list endpoint (events, my events, bookings, my bookings, an event's bookings, applications, users).
-- _Why deferred:_ It touches every list at once, so it is done as one pass after v1, with automated tests in place.
-- _What it changes:_ Query parameters and response metadata on the list endpoints. Counting tickets with `groupBy` instead of loading ticket rows.
+### Part 1: make it production-shaped (about 3 weeks)
 
-**Automated tests**
+| Step | What | Notes |
+|---|---|---|
+| 1 | **Lint and format** | ESLint + Prettier. About half a day. |
+| 2 | **Docker + docker-compose** | App + Postgres now, Redis later. |
+| 3 | **GitHub Actions** | Typecheck, lint, and tests (with a Postgres service). Needs steps 1 and 2 to have something to run. |
+| 4 | **Security basics** | `helmet`, CORS, rate limit on `/auth/login` and `/auth/register`, environment validation with Zod. Also, login must take about the same time for an unknown email as for a wrong password, so response time does not reveal which emails exist. |
+| 5 | **Observability** | Structured logs, a request id on every request, and a `GET /health` endpoint. |
+| 6 | **README** | Written last, so it matches reality. |
 
-- _What:_ Integration tests on a separate test database, including concurrency tests (parallel bookings for the last spots, double cancel, two scanners on one ticket).
+Choices in this part:
 
-**Completed-event state via background job**
+| Topic | Naive | Production-ready | Trade-off |
+|---|---|---|---|
+| Logging | `console.log` + morgan | Structured JSON logs (for example pino) with request ids | Naive is zero work but hard to search. Structured needs setup but is searchable. |
+| Rate limiting | In-memory counter | Redis-backed limiter | In-memory breaks when two servers run. Redis works across servers but adds a dependency. |
 
-- _What:_ Stored `COMPLETED` status, updated automatically when an event ends.
-- _Why deferred:_ Needs a job queue (BullMQ). In v1 "past" is derived from `endsAt < now`.
+### Part 2: Redis, jobs, notifications, payments (about 3 weeks)
 
-**Payments with a real gateway**
+| Step | What | Notes |
+|---|---|---|
+| 1 | **Redis + caching** | First, because BullMQ needs Redis. |
+| 2 | **Background jobs (BullMQ)** | The first job is the stored `COMPLETED` event state (section 10). |
+| 3 | **Retries** | Comes with jobs: backoff and a dead-letter queue. |
+| 4 | **Notifications (email)** | Sent from a job, never inside the request. |
+| 5 | **Idempotency** | Learned right before payments, where it matters most. |
+| 6 | **Payment gateway** | Test mode only, with webhooks. It is the biggest topic. If time runs short, cut it down to "create a payment + handle one webhook". |
 
-- _What:_ Paid tickets, prices on ticket types, a payment step in the booking flow.
-- _What it changes:_ Price fields on `TicketType`, payment records, and a `PENDING_PAYMENT` booking state with expiring reservations.
+Choices in this part:
+
+| Topic | Naive | Production-ready | Trade-off |
+|---|---|---|---|
+| Caching | Cache in a JS variable | Redis with expiry (TTL) and invalidation | A variable is simple but lost on restart. Redis is shared, but you must decide when to clear stale data. |
+| Jobs | `setInterval` | BullMQ | `setInterval` dies with the server and runs twice with two servers. BullMQ is reliable but needs Redis. |
+
+### Part 3 (optional): auth upgrades
+
+1. **Refresh tokens** on top of the current JWT setup.
+2. **OAuth2** and **MFA**, which are easier after refresh tokens exist.
+
+---
+
+## 10. Deferred / future work
+
+**Completed-event state via background job** (Part 2, step 2)
+- *What:* Stored `COMPLETED` status, updated automatically when an event ends.
+- *Why deferred:* Needs a job queue (BullMQ). In v1 "past" is derived from `endsAt < now`.
+- *What it changes:* A scheduled job and a `COMPLETED` enum value, and simpler date queries.
+
+**Notifications** (Part 2, step 4)
+- *What:* Emails or push messages for booking confirmation, event cancellation, and application decisions. Sent through background jobs.
+- *Related:* When notifications exist, editing a published event (BR-E5) can be revisited: attendees would be told about changes and could cancel their booking.
+
+**Payments with a real gateway** (Part 2, step 6)
+- *What:* Paid tickets, prices on ticket types, a payment step in the booking flow.
+- *What it changes:* Price fields on `TicketType`, payment records, and a `PENDING_PAYMENT` booking state with expiring reservations. Needs idempotency first (Part 2, step 5).
+- *Testing note:* A fault-injection test (force a failure in the middle of a booking and check that everything rolls back) is left for when payments are added.
 
 **Refunds when tickets are cancelled**
 
@@ -407,18 +463,13 @@ Rows of the same table are locked together in one query with `ORDER BY id`.
 
 - _What:_ Custom names such as "Early Bird" or "Student" instead of a fixed enum.
 
-**Notifications**
-
-- _What:_ Emails or push messages for booking confirmation, event cancellation, and application decisions. Best sent through background jobs.
-
 **Profile updates**
 
 - _What:_ `PATCH /users/me` to change name or password.
 
 **Known limitations**
-
-- Ticket type capacity can still be edited after a published event has started (BR-T5 only blocks cancelled events).
-- Two admins deleting their accounts at the same moment could both pass the "last admin" check.
+- Event title, description, and location have no minimum length (BR-E12).
 - A user who is approved as organizer cannot apply again, and there is no way to return to the `USER` role in v1.
+- Two admins deleting their accounts at the same moment could both pass the "last admin" check.
 
 **Other:** waitlists, recurring events, ticket transfers, search and recommendations, geocoded locations.
