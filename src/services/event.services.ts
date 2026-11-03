@@ -23,8 +23,12 @@ const eventSummarySelect = {
 
 const ticketTypeSummarySelect = { id: true, type: true, capacity: true, remaining: true } as const;
 
-export async function getEventsService(page: number, limit: number, user?: AuthenticatedUser, status: EventStatus = "PUBLISHED") {
-
+export async function getEventsService(
+  page: number,
+  limit: number,
+  user?: AuthenticatedUser,
+  status: EventStatus = 'PUBLISHED',
+) {
   let where: Prisma.EventWhereInput;
 
   if (status === "PUBLISHED") {
@@ -40,8 +44,16 @@ export async function getEventsService(page: number, limit: number, user?: Authe
   const [events, totalItems] = await prisma.$transaction([
     prisma.event.findMany({
       where,
-      select: { id: true, organizerId: true, title: true, description: true, startsAt: true, endsAt: true, location: true, },
-      orderBy: [{ startsAt: "desc" }, { id: "desc" }],
+      select: {
+        id: true,
+        organizerId: true,
+        title: true,
+        description: true,
+        startsAt: true,
+        endsAt: true,
+        location: true,
+      },
+      orderBy: [{ startsAt: 'desc' }, { id: 'desc' }],
       skip: (page - 1) * limit,
       take: limit,
     }),
@@ -49,8 +61,7 @@ export async function getEventsService(page: number, limit: number, user?: Authe
   ]);
 
   return { events, pagination: buildPagination(page, limit, totalItems) };
-
-};
+}
 
 export async function getMyEventsService(page: number, limit: number, userId: string, status?: EventStatus) {
 
@@ -71,13 +82,15 @@ export async function getMyEventsService(page: number, limit: number, userId: st
 }
 
 const canViewEvent = (event: { organizerId: string, status: string }, user?: AuthenticatedUser) => {
-
   return (event.status === "PUBLISHED" || user?.role === "ADMIN" || event.organizerId === user?.id);
-
 }
 
-export async function getEventService(eventId: string, user?: AuthenticatedUser) {
-
+export async function getEventService(
+  page: number,
+  limit: number,
+  userId: string,
+  status?: EventStatus,
+) {
   const event = await prisma.event.findUnique({
     where: {
       id: eventId
@@ -104,10 +117,9 @@ export async function getEventService(eventId: string, user?: AuthenticatedUser)
   }
 
   return event;
-};
+}
 
 export async function postEventService(eventInfo: CreateEventInput, organizerId: string) {
-
   const event = await prisma.event.create({
     data: {
       organizerId: organizerId,
@@ -122,11 +134,9 @@ export async function postEventService(eventInfo: CreateEventInput, organizerId:
   });
 
   return event;
-
-};
+}
 
 export async function patchEventService(eventId: string, eventInfo: PatchEventInput) {
-
   return await prisma.$transaction(
     async (tx) => {
 
@@ -173,12 +183,10 @@ export async function patchEventService(eventId: string, eventInfo: PatchEventIn
 };
 
 export async function publishEventService(eventId: string) {
-
-  const updatedEvent = await prisma.$transaction(
-    async (tx) => {
-
-      const eventRows = await tx.$queryRaw<{ id: string; status: EventStatus; startsAt: Date }[]>
-        `SELECT id, status, "startsAt" FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
+  const updatedEvent = await prisma.$transaction(async (tx) => {
+      const eventRows = await tx.$queryRaw<
+          { id: string; status: EventStatus; startsAt: Date }[]
+      >`SELECT id, status, "startsAt" FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
 
       const existingEvent = eventRows[0];
 
@@ -211,15 +219,13 @@ export async function publishEventService(eventId: string) {
   );
 
   return updatedEvent;
-
-};
+}
 
 export async function cancelEventService(eventId: string) {
-
-  await prisma.$transaction(
-    async (tx) => {
-      const eventRows = await tx.$queryRaw<{ id: string; status: EventStatus; startsAt: Date }[]>
-        `SELECT id, status, "startsAt" FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
+  await prisma.$transaction(async (tx) => {
+      const eventRows = await tx.$queryRaw<
+            { id: string; status: EventStatus; startsAt: Date }[]
+      >`SELECT id, status, "startsAt" FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
 
       const event = eventRows[0];
 
@@ -254,173 +260,179 @@ export async function cancelEventService(eventId: string) {
       });
     }
   );
+}
 
-};
+export async function postTicketTypeService(
+  eventId: string,
+  ticketTypeInfo: CreateTicketTypeInput,
+) {
+  const existingEvent = await prisma.event.findUnique({
+    where: { id: eventId },
+  });
 
-export async function postTicketTypeService(eventId: string, ticketTypeInfo: CreateTicketTypeInput) {
+  if (!existingEvent) {
+    throw new AppError(404, 'Event not found');
+  }
 
-  return await prisma.$transaction(
-    async (tx) => {
+  if (existingEvent.status === 'CANCELLED') {
+    throw new AppError(409, 'Only draft or published events can recieve new ticket types');
+  }
 
-      const eventRows = await tx.$queryRaw<{ id: string; status: EventStatus }[]>
-        `SELECT id, status FROM "Event" WHERE id = ${eventId} FOR SHARE`;
+  const ticketType = await prisma.ticketType.create({
+    data: {
+      eventId: eventId,
+      type: ticketTypeInfo.type,
+      capacity: ticketTypeInfo.capacity,
+      remaining: ticketTypeInfo.capacity,
+    },
+    select: ticketTypeSummarySelect,
+  });
 
-      const existingEvent = eventRows[0];
+  return ticketType;
+}
 
-      if (!existingEvent) {
-        throw new AppError(404, "Event not found");
-      }
+export async function patchTicketTypeService(
+  eventId: string,
+  ticketTypeId: string,
+  ticketTypeInfo: PatchTicketTypeInput,
+) {
+  const result = await prisma.$transaction(async (tx) => {
+    const eventRows = await tx.$queryRaw<
+      { id: string; status: EventStatus }[]
+    >`SELECT id, status FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
 
-      if (existingEvent.status === "CANCELLED") {
-        throw new AppError(409, "Only draft or published events can recieve new ticket types");
-      }
+    const existingEvent = eventRows[0];
 
-      const ticketType = await tx.ticketType.create({
-        data: {
-          eventId: eventId,
-          type: ticketTypeInfo.type,
-          capacity: ticketTypeInfo.capacity,
-          remaining: ticketTypeInfo.capacity
-        },
-        select: ticketTypeSummarySelect
-      });
+    if (!existingEvent) {
+      throw new AppError(404, 'Event not found');
+    }
 
-      return ticketType;
+    if (existingEvent.status === 'CANCELLED') {
+      throw new AppError(409, 'Cancelled events cannot be modified');
+    }
+
+    const ticketTypeRows = await tx.$queryRaw<
+      { id: string; capacity: number; remaining: number; type: TicketTypeKind }[]
+    >`SELECT id, capacity, remaining, type FROM "TicketType" WHERE id = ${ticketTypeId} AND "eventId" = ${eventId} FOR UPDATE`; // row locked. booking service should lock the row too
+
+    const existingTicketType = ticketTypeRows[0];
+
+    if (!existingTicketType) {
+      throw new AppError(404, 'Ticket Type not found');
+    }
+
+    const newCapacity = ticketTypeInfo.capacity ?? existingTicketType.capacity;
+
+    const newType = ticketTypeInfo.type ?? existingTicketType.type;
+
+    const bookedTickets = await tx.ticket.count({
+      where: {
+        ticketTypeId,
+        status: { not: 'CANCELLED' },
+      },
     });
 
-};
-
-export async function patchTicketTypeService(eventId: string, ticketTypeId: string, ticketTypeInfo: PatchTicketTypeInput) {
-
-  const result = await prisma.$transaction(
-    async (tx) => {
-
-      const eventRows = await tx.$queryRaw<{ id: string; status: EventStatus }[]>
-        `SELECT id, status FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
-
-      const existingEvent = eventRows[0];
-
-      if (!existingEvent) {
-        throw new AppError(404, "Event not found");
-      }
-
-      if (existingEvent.status === "CANCELLED") {
-        throw new AppError(409, "Cancelled events cannot be modified");
-      }
-
-      const ticketTypeRows = await tx.$queryRaw<{ id: string; capacity: number; remaining: number; type: TicketTypeKind }[]>
-        `SELECT id, capacity, remaining, type FROM "TicketType" WHERE id = ${ticketTypeId} AND "eventId" = ${eventId} FOR UPDATE`; // row locked. booking service should lock the row too 
-
-      const existingTicketType = ticketTypeRows[0];
-
-      if (!existingTicketType) {
-        throw new AppError(404, "Ticket Type not found");
-      }
-
-      const newCapacity = ticketTypeInfo.capacity ?? existingTicketType.capacity;
-
-      const newType = ticketTypeInfo.type ?? existingTicketType.type;
-
-      const bookedTickets = await tx.ticket.count({
-        where: {
-          ticketTypeId,
-          status: { not: "CANCELLED" }
-        }
-      });
-
-      if (newCapacity < bookedTickets) {
-        throw new AppError(409, `Capacity cannot be less than the number of booked tickets (${bookedTickets})`);
-      }
-
-      if (ticketTypeInfo.type !== undefined && ticketTypeInfo.type !== existingTicketType.type && bookedTickets > 0) {
-        throw new AppError(409, "Ticket type cannot be changed after tickets have been booked");
-      }
-
-      return await tx.ticketType.update({
-        where: { id: ticketTypeId, eventId },
-        data: { type: newType, capacity: newCapacity, remaining: newCapacity - bookedTickets },
-        select: ticketTypeSummarySelect
-      });
-
+    if (newCapacity < bookedTickets) {
+      throw new AppError(
+        409,
+        `Capacity cannot be less than the number of booked tickets (${bookedTickets})`,
+      );
     }
-  );
+
+    if (
+      ticketTypeInfo.type !== undefined &&
+      ticketTypeInfo.type !== existingTicketType.type &&
+      bookedTickets > 0
+    ) {
+      throw new AppError(409, 'Ticket type cannot be changed after tickets have been booked');
+    }
+
+    return await tx.ticketType.update({
+      where: { id: ticketTypeId, eventId },
+      data: { type: newType, capacity: newCapacity, remaining: newCapacity - bookedTickets },
+      select: ticketTypeSummarySelect,
+    });
+  });
 
   return result;
-
-};
+}
 
 export async function deleteTicketTypeService(eventId: string, ticketTypeId: string) {
+  const result = await prisma.$transaction(async (tx) => {
+    // lock event row to enforce rule: for a published event, there must be at least one ticket type. so case the of deleting last ticket type of a published event doesn't happen
+    const eventRows = await tx.$queryRaw<
+      { id: string; status: EventStatus }[]
+    >`SELECT id, status FROM "Event" WHERE id = ${eventId} FOR UPDATE`; // must be locked in publishEventService too
 
-  const result = await prisma.$transaction(
-    async (tx) => {
+    const event = eventRows[0];
 
-      // lock event row to enforce rule: for a published event, there must be at least one ticket type. so case the of deleting last ticket type of a published event doesn't happen 
-      const eventRows = await tx.$queryRaw<{ id: string; status: EventStatus }[]>
-        `SELECT id, status FROM "Event" WHERE id = ${eventId} FOR UPDATE`; // must be locked in publishEventService too
+    if (!event) {
+      throw new AppError(404, 'Event not found');
+    }
 
-      const event = eventRows[0];
+    if (event.status === 'CANCELLED') {
+      throw new AppError(409, 'Cancelled events cannot be modified');
+    }
 
-      if (!event) {
-        throw new AppError(404, "Event not found");
-      }
+    // row locked so that no booking can happen while deleting this ticket type
+    const ticketTypeRows = await tx.$queryRaw<
+      { id: string }[]
+    >`SELECT id FROM "TicketType" WHERE id = ${ticketTypeId} AND "eventId" = ${eventId} FOR UPDATE`;
 
-      if (event.status === "CANCELLED") {
-        throw new AppError(409, "Cancelled events cannot be modified");
-      }
+    const ticketType = ticketTypeRows[0];
 
-      // row locked so that no booking can happen while deleting this ticket type
-      const ticketTypeRows = await tx.$queryRaw<{ id: string }[]>
-        `SELECT id FROM "TicketType" WHERE id = ${ticketTypeId} AND "eventId" = ${eventId} FOR UPDATE`;
+    if (!ticketType) {
+      throw new AppError(404, 'Ticket Type not found');
+    }
 
-      const ticketType = ticketTypeRows[0];
-
-      if (!ticketType) {
-        throw new AppError(404, "Ticket Type not found");
-      }
-
-      const ticketCount = await tx.ticket.count({
-        where: { ticketTypeId }
-      });
-
-      if (ticketCount > 0) {
-        throw new AppError(409, "Ticket Types with at least one booked ticket can't be deleted");
-      }
-
-      if (event.status === "PUBLISHED") {
-        const ticketTypeCount = await tx.ticketType.count({
-          where: { eventId }
-        });
-
-        if (ticketTypeCount < 2) {
-          throw new AppError(409, "Published events must have at least one ticket type");
-        }
-      }
-
-      // draft events can have 0 ticket types
-
-      await tx.ticketType.delete({
-        where: { id: ticketTypeId, eventId }
-      });
-
+    const ticketCount = await tx.ticket.count({
+      where: { ticketTypeId },
     });
 
+    if (ticketCount > 0) {
+      throw new AppError(409, "Ticket Types with at least one booked ticket can't be deleted");
+    }
+
+    if (event.status === 'PUBLISHED') {
+      const ticketTypeCount = await tx.ticketType.count({
+        where: { eventId },
+      });
+
+      if (ticketTypeCount < 2) {
+        throw new AppError(409, 'Published events must have at least one ticket type');
+      }
+    }
+
+    // draft events can have 0 ticket types
+
+    await tx.ticketType.delete({
+      where: { id: ticketTypeId, eventId },
+    });
+  });
+
   return result;
+}
 
-};
-
-export async function getEventBookingsService(eventId: string, page: number, limit: number, status?: BookingStatus) {
-
+export async function getEventBookingsService(
+  eventId: string,
+  page: number,
+  limit: number,
+  status?: BookingStatus,
+) {
   const where = status ? { eventId, status } : { eventId };
 
   const [bookings, totalItems] = await prisma.$transaction([
     prisma.booking.findMany({
       where,
       select: {
-        id: true, status: true, createdAt: true, cancelledAt: true,
+        id: true,
+        status: true,
+        createdAt: true,
+        cancelledAt: true,
         user: { select: { name: true, email: true } },
-        tickets: { select: { status: true } }
+        tickets: { select: { status: true } },
       },
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       skip: (page - 1) * limit,
       take: limit,
     }),
@@ -429,70 +441,73 @@ export async function getEventBookingsService(eventId: string, page: number, lim
 
   return {
     bookings: bookings.map(({ tickets, ...booking }) => {
-      const cancelledTicketsCount = tickets.filter((t) => t.status === "CANCELLED").length;
+      const cancelledTicketsCount = tickets.filter((t) => t.status === 'CANCELLED').length;
       const activeTicketsCount = tickets.length - cancelledTicketsCount;
 
       return {
         ...booking,
-        activeTicketsCount, cancelledTicketsCount
-      }
+        activeTicketsCount,
+        cancelledTicketsCount,
+      };
     }),
-    pagination: buildPagination(page, limit, totalItems)
+    pagination: buildPagination(page, limit, totalItems),
   };
-
-};
+}
 
 export async function checkInService(eventId: string, codeInfo: CheckInInfo, userId: string) {
-
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    select: { startsAt: true, endsAt: true, status: true }
+    select: { startsAt: true, endsAt: true, status: true },
   });
 
   if (!event) {
-    throw new AppError(404, "Event not found");
+    throw new AppError(404, 'Event not found');
   }
 
   if (event.status !== 'PUBLISHED') {
-    throw new AppError(409, "Event is not published");
+    throw new AppError(409, 'Event is not published');
   }
 
   const now = new Date();
 
   if (event.startsAt > now) {
-    throw new AppError(409, "Event has not started yet");
+    throw new AppError(409, 'Event has not started yet');
   }
 
   if (now > event.endsAt) {
-    throw new AppError(409, "Event has ended");
+    throw new AppError(409, 'Event has ended');
   }
 
   const ticket = await prisma.ticket.findUnique({
     where: { code: codeInfo.code },
-    select: { id: true, status: true, ticketType: { select: { type: true } }, booking: { select: { eventId: true } } }
+    select: {
+      id: true,
+      status: true,
+      ticketType: { select: { type: true } },
+      booking: { select: { eventId: true } },
+    },
   });
 
   if (!ticket) {
-    throw new AppError(404, "Ticket not found");
+    throw new AppError(404, 'Ticket not found');
   }
 
   if (ticket.booking.eventId !== eventId) {
-    throw new AppError(404, "Ticket not found");
+    throw new AppError(404, 'Ticket not found');
   }
 
   if (ticket.status !== 'VALID') {
-    throw new AppError(409, "Ticket is not valid");
+    throw new AppError(409, 'Ticket is not valid');
   }
 
   const result = await prisma.ticket.updateMany({
-    where: { id: ticket.id, status: "VALID" },
-    data: { status: "USED", usedAt: now, checkedInById: userId },
+    where: { id: ticket.id, status: 'VALID' },
+    data: { status: 'USED', usedAt: now, checkedInById: userId },
   });
 
   if (result.count === 0) {
-    throw new AppError(409, "Ticket is already used or cancelled");
+    throw new AppError(409, 'Ticket is already used or cancelled');
   }
 
   return ticket.ticketType.type;
-
-};
+}

@@ -1,9 +1,8 @@
-import { Response } from "express";
-import { UnauthorizedError } from "../appError";
-import { IErrorHandler } from "../errors.types";
+import { Response } from 'express';
+import { UnauthorizedError } from '../appError';
+import { IErrorHandler } from '../errors.types';
 
 export class UnauthorizedErrorHandler implements IErrorHandler {
-
   canHandle(error: unknown): boolean {
     return error instanceof UnauthorizedError;
   }
@@ -12,4 +11,4 @@ export class UnauthorizedErrorHandler implements IErrorHandler {
     const unauthorizedError = error as UnauthorizedError;
     res.jsend.error(unauthorizedError.message, unauthorizedError.statusCode);
   }
-};
+}

@@ -1,17 +1,17 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction } from 'express';
 
 export type JSendSuccess<T> = {
-  status: "success";
+  status: 'success';
   data: T;
 };
 
 export type JSendFail<T> = {
-  status: "fail";
+  status: 'fail';
   data: T;
 };
 
 export type JSendError = {
-  status: "error";
+  status: 'error';
   message: string;
 };
 
@@ -30,24 +30,26 @@ declare global {
 }
 
 export const jsend = (req: Request, res: Response, next: NextFunction) => {
-
   res.jsend = {
     success: <T>(data: T, statusCode = 200) => {
       return res.status(statusCode).json({
-        status: "success", data
+        status: 'success',
+        data,
       });
     },
     fail: <T>(data: T, statusCode = 400) => {
       return res.status(statusCode).json({
-        status: "fail", data
+        status: 'fail',
+        data,
       });
     },
     error: (message: string, statusCode = 500) => {
       return res.status(statusCode).json({
-        status: "error", message
+        status: 'error',
+        message,
       });
-    }
-  }
+    },
+  };
 
   next();
 };

@@ -9,6 +9,7 @@ Status: v1 API complete, with pagination and automated tests. Roadmap added. Las
 **Bookly** is a backend API for publishing events and reserving spots in them. Organizers create events and define ticket types with limited capacity. Users browse published events and book tickets. Every booked spot becomes its own ticket with a unique QR code, which the organizer scans at the door.
 
 **In v1**
+
 - Registration, login, and role-based access (Admin, Organizer, User)
 - Users apply to become organizers, and admins approve or reject
 - Organizers create, edit, publish, and cancel their own events, and define ticket types for them
@@ -46,6 +47,7 @@ Status: v1 API complete, with pagination and automated tests. Roadmap added. Las
 - is safe to run again: if the email already exists, nothing changes (the password is never changed by re-running it).
 
 **Authorization model:** two checks, applied in order.
+
 1. **Role check** (`authorize`): is this kind of user allowed to use this endpoint at all?
 2. **Ownership check** (`requireOwnership`): does this specific resource belong to them? Admins always bypass this check, but only on routes where the role check lets them in. A route can add an extra rule (`alsoAllow`) that grants access to non-owners. It is used only on `GET /bookings/:bookingId`, so the organizer of the booking's event can read it.
 
@@ -71,6 +73,7 @@ Status: v1 API complete, with pagination and automated tests. Roadmap added. Las
 ## 4. Business model
 
 **v1:** Bookly is free for everyone and earns no revenue. Its value is the reservation management itself:
+
 - Organizers publish events and manage attendance without overbooking, and verify attendees at the door.
 - Users find events, reliably reserve spots, and hold a QR ticket for each one.
 
@@ -84,15 +87,15 @@ Status: v1 API complete, with pagination and automated tests. Roadmap added. Las
 
 ### 5.1 User
 
-| Field | Purpose |
-|---|---|
-| `id` | Primary key (UUID) |
-| `name` | Display name |
-| `email` | Unique. Used to log in. |
-| `passwordHash` | The hashed password. Never returned by the API. |
-| `role` | `ADMIN` \| `USER` \| `ORGANIZER`. Defaults to `USER`. |
-| `deletedAt` | Set when the account is deleted (anonymized). `NULL` otherwise. |
-| `createdAt`, `updatedAt` | Bookkeeping |
+| Field                    | Purpose                                                         |
+| ------------------------ | --------------------------------------------------------------- |
+| `id`                     | Primary key (UUID)                                              |
+| `name`                   | Display name                                                    |
+| `email`                  | Unique. Used to log in.                                         |
+| `passwordHash`           | The hashed password. Never returned by the API.                 |
+| `role`                   | `ADMIN` \| `USER` \| `ORGANIZER`. Defaults to `USER`.           |
+| `deletedAt`              | Set when the account is deleted (anonymized). `NULL` otherwise. |
+| `createdAt`, `updatedAt` | Bookkeeping                                                     |
 
 Registration always creates a `USER`. The role changes only when an admin approves an organizer application (BR-A4), and the first admin is created by the seed script.
 
@@ -100,17 +103,17 @@ Accounts are never hard-deleted. "Deleting" an account anonymizes it (BR-U1 to U
 
 ### 5.2 OrganizerApplication
 
-| Field | Purpose |
-|---|---|
-| `id` | Primary key |
-| `userId` | Who applied (owner field) |
-| `organizationName` | Name they will host events under (2 to 100 characters) |
-| `description` | What kind of events they plan to host and why (20 to 1000 characters) |
-| `status` | `PENDING` \| `APPROVED` \| `REJECTED` |
-| `reviewedById` | Admin who decided (empty until reviewed) |
-| `reviewedAt` | When it was decided (empty until reviewed) |
-| `reviewNote` | Reason, shown to the applicant. Required when rejecting, optional when approving. |
-| `createdAt` | When they applied |
+| Field              | Purpose                                                                           |
+| ------------------ | --------------------------------------------------------------------------------- |
+| `id`               | Primary key                                                                       |
+| `userId`           | Who applied (owner field)                                                         |
+| `organizationName` | Name they will host events under (2 to 100 characters)                            |
+| `description`      | What kind of events they plan to host and why (20 to 1000 characters)             |
+| `status`           | `PENDING` \| `APPROVED` \| `REJECTED`                                             |
+| `reviewedById`     | Admin who decided (empty until reviewed)                                          |
+| `reviewedAt`       | When it was decided (empty until reviewed)                                        |
+| `reviewNote`       | Reason, shown to the applicant. Required when rejecting, optional when approving. |
+| `createdAt`        | When they applied                                                                 |
 
 ```
 PENDING ──► APPROVED
@@ -121,15 +124,15 @@ Decisions are final. A rejected user who wants to try again creates a **new** ap
 
 ### 5.3 Event
 
-| Field | Purpose |
-|---|---|
-| `id` | Primary key |
-| `organizerId` | Owner (owner field) |
-| `title`, `description` | What the event is |
-| `location` | Plain text in v1 |
-| `startsAt`, `endsAt` | The time window. "Past" is derived from `endsAt < now`. |
-| `status` | `DRAFT` \| `PUBLISHED` \| `CANCELLED` |
-| `createdAt`, `updatedAt` | Bookkeeping |
+| Field                    | Purpose                                                 |
+| ------------------------ | ------------------------------------------------------- |
+| `id`                     | Primary key                                             |
+| `organizerId`            | Owner (owner field)                                     |
+| `title`, `description`   | What the event is                                       |
+| `location`               | Plain text in v1                                        |
+| `startsAt`, `endsAt`     | The time window. "Past" is derived from `endsAt < now`. |
+| `status`                 | `DRAFT` \| `PUBLISHED` \| `CANCELLED`                   |
+| `createdAt`, `updatedAt` | Bookkeeping                                             |
 
 ```
 DRAFT ──► PUBLISHED ──► CANCELLED
@@ -142,27 +145,27 @@ Capacity is **not** on the event. It lives on the event's ticket types, and the 
 
 ### 5.4 TicketType
 
-| Field | Purpose |
-|---|---|
-| `id` | Primary key |
-| `eventId` | Which event offers it |
-| `type` | Enum. Initial values: `GENERAL`, `VIP` |
-| `capacity` | Maximum number of tickets of this type |
-| `remaining` | Tickets of this type still available |
-| `createdAt`, `updatedAt` | Bookkeeping |
+| Field                    | Purpose                                |
+| ------------------------ | -------------------------------------- |
+| `id`                     | Primary key                            |
+| `eventId`                | Which event offers it                  |
+| `type`                   | Enum. Initial values: `GENERAL`, `VIP` |
+| `capacity`               | Maximum number of tickets of this type |
+| `remaining`              | Tickets of this type still available   |
+| `createdAt`, `updatedAt` | Bookkeeping                            |
 
 Unique on (`eventId`, `type`): an event has at most one ticket type of each kind. Prices will be added here in v2.
 
 ### 5.5 Booking
 
-| Field | Purpose |
-|---|---|
-| `id` | Primary key |
-| `userId` | Who booked (owner field) |
-| `eventId` | Which event |
-| `status` | `CONFIRMED` \| `CANCELLED` |
-| `createdAt`, `updatedAt` | Bookkeeping |
-| `cancelledAt` | When it was cancelled (empty while confirmed) |
+| Field                    | Purpose                                       |
+| ------------------------ | --------------------------------------------- |
+| `id`                     | Primary key                                   |
+| `userId`                 | Who booked (owner field)                      |
+| `eventId`                | Which event                                   |
+| `status`                 | `CONFIRMED` \| `CANCELLED`                    |
+| `createdAt`, `updatedAt` | Bookkeeping                                   |
+| `cancelledAt`            | When it was cancelled (empty while confirmed) |
 
 ```
 CONFIRMED ──► CANCELLED
@@ -174,17 +177,17 @@ There is no `quantity` column. The number of spots in a booking is the number of
 
 ### 5.6 Ticket
 
-| Field | Purpose |
-|---|---|
-| `id` | Primary key |
-| `bookingId` | Which booking it belongs to (the event is reached through the booking) |
-| `ticketTypeId` | Which type it is, and therefore which capacity pool it came from |
-| `code` | The QR token: random, unique, never sequential |
-| `status` | `VALID` \| `USED` \| `CANCELLED` |
-| `createdAt` | When it was issued |
-| `cancelledAt` | When it was cancelled (empty otherwise) |
-| `usedAt` | When it was scanned at the door (empty otherwise) |
-| `checkedInById` | Which organizer scanned it (empty otherwise) |
+| Field           | Purpose                                                                |
+| --------------- | ---------------------------------------------------------------------- |
+| `id`            | Primary key                                                            |
+| `bookingId`     | Which booking it belongs to (the event is reached through the booking) |
+| `ticketTypeId`  | Which type it is, and therefore which capacity pool it came from       |
+| `code`          | The QR token: random, unique, never sequential                         |
+| `status`        | `VALID` \| `USED` \| `CANCELLED`                                       |
+| `createdAt`     | When it was issued                                                     |
+| `cancelledAt`   | When it was cancelled (empty otherwise)                                |
+| `usedAt`        | When it was scanned at the door (empty otherwise)                      |
+| `checkedInById` | Which organizer scanned it (empty otherwise)                           |
 
 ```
 VALID ──► USED
@@ -197,16 +200,16 @@ VALID ──► USED
 
 Bookly never hard-deletes business records: users are anonymized, events and bookings are cancelled, and tickets are cancelled. So every foreign key uses `onDelete: Restrict`: the database refuses the delete rather than silently cascading through history or leaving `remaining` out of sync.
 
-| Relation | `onDelete` |
-|---|---|
-| `Event.organizerId` → `User` | `Restrict` |
-| `Booking.userId` → `User` | `Restrict` |
+| Relation                                                | `onDelete` |
+| ------------------------------------------------------- | ---------- |
+| `Event.organizerId` → `User`                            | `Restrict` |
+| `Booking.userId` → `User`                               | `Restrict` |
 | `OrganizerApplication.userId`, `.reviewedById` → `User` | `Restrict` |
-| `Ticket.checkedInById` → `User` | `Restrict` |
-| `TicketType.eventId` → `Event` | `Restrict` |
-| `Booking.eventId` → `Event` | `Restrict` |
-| `Ticket.bookingId` → `Booking` | `Restrict` |
-| `Ticket.ticketTypeId` → `TicketType` | `Restrict` |
+| `Ticket.checkedInById` → `User`                         | `Restrict` |
+| `TicketType.eventId` → `Event`                          | `Restrict` |
+| `Booking.eventId` → `Event`                             | `Restrict` |
+| `Ticket.bookingId` → `Booking`                          | `Restrict` |
+| `Ticket.ticketTypeId` → `TicketType`                    | `Restrict` |
 
 ---
 
@@ -270,6 +273,7 @@ Bookly never hard-deletes business records: users are anonymized, events and boo
   - **cancel one specific `VALID` ticket** of their choice. Each cancelled ticket returns one spot to its type's `remaining`.
 
   Each change is **one transaction**. Reducing tickets is done only by cancelling tickets, so the user decides which QR code stops working.
+
 - **BR-B6:** Cancelling the last remaining ticket of a booking cancels the booking. A `CONFIRMED` booking always holds at least one ticket.
 - **BR-B7:** While the event has not started, the owner can cancel a whole booking. The booking and all its tickets become `CANCELLED`, and each type's `remaining` is restored, in **one transaction**. Cancelling is final, and booking again later creates a new booking.
 - **BR-B8:** Visibility:
@@ -447,17 +451,21 @@ Choices in this part:
 - *Testing note:* A fault-injection test (force a failure in the middle of a booking and check that everything rolls back) is left for when payments are added.
 
 **Refunds when tickets are cancelled**
-- *What:* When a paid ticket is cancelled, refund its price.
+
+- _What:_ When a paid ticket is cancelled, refund its price.
 
 **Check-in before the event starts**
-- *What:* A configurable window so doors can open before `startsAt`.
-- *Why deferred:* In v1 check-in opens exactly at the start, so it never overlaps with booking changes.
+
+- _What:_ A configurable window so doors can open before `startsAt`.
+- _Why deferred:_ In v1 check-in opens exactly at the start, so it never overlaps with booking changes.
 
 **Organizer-defined ticket types**
-- *What:* Custom names such as "Early Bird" or "Student" instead of a fixed enum.
+
+- _What:_ Custom names such as "Early Bird" or "Student" instead of a fixed enum.
 
 **Profile updates**
-- *What:* `PATCH /users/me` to change name or password.
+
+- _What:_ `PATCH /users/me` to change name or password.
 
 **Known limitations**
 - Event title, description, and location have no minimum length (BR-E12).
