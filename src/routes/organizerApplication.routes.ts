@@ -5,7 +5,6 @@ import {
   applicationIdParamSchema,
   ApproveApplicationSchema,
   CreateApplicationSchema,
-  ListApplicationsQuerySchema,
   RejectApplicationSchema,
 } from '../schemas/organizerApplication.schema';
 import { asyncHandler } from '../middlewares/asyncHandler';

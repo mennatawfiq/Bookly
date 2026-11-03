@@ -2,9 +2,7 @@ import { ApplicationStatus } from '../../prisma/generated/enums';
 import { AppError } from '../errorhandling/appError';
 import prisma from '../lib/prisma';
 import {
-  ApproveApplication,
   CreateApplicationInput,
-  RejectApplication,
 } from '../schemas/organizerApplication.schema';
 import { buildPagination } from '../utils/pagination.util';
 

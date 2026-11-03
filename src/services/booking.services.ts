@@ -172,7 +172,7 @@ export async function postBookingService(
 
     const countByType = new Map(bookingInfo.tickets.map((t) => [t.type, t.count]));
 
-    for (const { id, type, remaining } of rows) {
+    for (const { type, remaining } of rows) {
       const count = countByType.get(type)!;
 
       if (remaining < count) {
@@ -183,7 +183,7 @@ export async function postBookingService(
       }
     }
 
-    for (const { id, type, remaining } of rows) {
+    for (const { id, type } of rows) {
       const count = countByType.get(type)!;
 
       await tx.ticketType.update({

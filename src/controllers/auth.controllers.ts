@@ -3,7 +3,10 @@ import { registerUser, loginUser } from '../services/auth.services';
 import { RegisterInput } from '../schemas/auth.schema';
 import { generateAccessToken } from '../utils/jwt.util';
 
-export const register = async (req: Request<{}, {}, RegisterInput>, res: Response) => {
+export const register = async (
+  req: Request<Record<string, never>, Record<string, never>, RegisterInput>,
+  res: Response
+) => {
   const { name, email, password } = req.body;
 
   const user = await registerUser(name, email, password);

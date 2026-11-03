@@ -10,7 +10,6 @@ import {
 import { AppError } from '../errorhandling/appError';
 import { getTicketsService } from '../services/ticket.services';
 import { ListBookingsQuerySchema } from '../schemas/booking.schema';
-import { OffsetPaginationQuerySchema } from '../schemas/pagination.schema';
 
 export const getAllBookings = async (req: Request, res: Response) => {
   const { status, page, limit } = ListBookingsQuerySchema.parse(req.query);

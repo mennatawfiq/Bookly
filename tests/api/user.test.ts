@@ -5,7 +5,7 @@ import { cleanTestDatabase } from '../helpers/cleanup';
 import { createUser, loginAs, authHeader, deleteUser } from '../helpers/auth';
 import { createEvent, createTicketType } from '../helpers/event';
 import prisma from '../../src/lib/prisma';
-import { cancelBooking, createBooking } from '../helpers/booking';
+import { createBooking } from '../helpers/booking';
 
 afterEach(async () => {
   await cleanTestDatabase();

@@ -97,7 +97,7 @@ describe('POST /auth/register route tests', () => {
   });
 
   it('a missing name should get 400', async () => {
-    const { name, ...withoutName } = validBody;
+    const { name: _name, ...withoutName } = validBody;
     const response = await request(app).post('/auth/register').send(withoutName);
 
     expect(response.status).toBe(400);

@@ -251,7 +251,7 @@ describe('POST /events route tests', () => {
   it('a missing title should get 400', async () => {
     const organizer = await createUser('ORGANIZER');
     const token = await loginAs(organizer.credentials);
-    const { title, ...withoutTitle } = validBody;
+    const { title: _title, ...withoutTitle } = validBody;
     const response = await request(app).post('/events').set(authHeader(token)).send(withoutTitle);
 
     expect(response.status).toBe(400);
