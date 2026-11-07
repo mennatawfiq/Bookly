@@ -11,7 +11,9 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",
-    "format:check": "prettier . --check"
+    "format:check": "prettier . --check",
+    "build": "tsc",
+    "start": "node dist/src/server.js"
   },
   "repository": {
     "type": "git",
