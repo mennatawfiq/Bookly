@@ -6,6 +6,8 @@ out/
 
 .env
 .env.test
+.env.docker
+!.env.example
 prisma/generated
 
 .claude

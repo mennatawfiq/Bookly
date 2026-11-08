@@ -1,0 +1,50 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: bookly-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Missing POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Missing POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?Missing POSTGRES_DB}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    image: bookly:local
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER:?Missing POSTGRES_USER}:${POSTGRES_PASSWORD:?Missing POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:?Missing POSTGRES_DB}"
+      JWT_SECRET: ${JWT_SECRET:?Missing JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?Missing ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Missing ADMIN_PASSWORD}
+      NODE_ENV: production
+
+  migrate:
+    build:
+      context: .
+      target: builder
+    profiles: ["tools"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
+    command: ["npx", "prisma", "migrate", "deploy"]
+
+volumes:
+  postgres_data:
