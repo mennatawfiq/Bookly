@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
 import { registerUser, loginUser } from '../services/auth.services';
 import { RegisterInput } from '../schemas/auth.schema';
 import { generateAccessToken } from '../utils/jwt.util';
 
 export const register = async (
-  req: Request<Record<string, never>, Record<string, never>, RegisterInput>,
+  req: Request<ParamsDictionary, Record<string, never>, RegisterInput>,
   res: Response,
 ) => {
   const { name, email, password } = req.body;
