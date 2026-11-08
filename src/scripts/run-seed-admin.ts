@@ -1,9 +1,9 @@
-import prisma from '../src/lib/prisma';
+import prisma from '../lib/prisma';
 import { seedAdmin } from './seed-admin';
 
 seedAdmin()
   .then(() => console.log('Admin is ready'))
-  .catch((e) => {
+  .catch((e: unknown) => {
     console.error(e);
     process.exit(1);
   })
