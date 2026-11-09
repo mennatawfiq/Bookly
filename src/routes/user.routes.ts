@@ -1,4 +1,4 @@
-import Router from 'express';
+import { Router } from 'express';
 import { authenticate, authorize } from '../middlewares/auth';
 import { asyncHandler } from '../middlewares/asyncHandler';
 import { deleteMe, getMe, getUsers } from '../controllers/user.controllers';

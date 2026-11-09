@@ -1,4 +1,4 @@
-import Router from 'express';
+import { Router } from 'express';
 import { asyncHandler } from '../middlewares/asyncHandler';
 import {
   authenticate,
