@@ -10,16 +10,15 @@ import cors from 'cors';
 
 export const app = express();
 
-app.use(helmet());
 // set HSTS in production
 app.use(
   helmet({
     strictTransportSecurity:
       process.env.NODE_ENV === 'production'
         ? {
-            maxAge: 31536000,
-            includeSubDomains: true,
-          }
+          maxAge: 31536000,
+          includeSubDomains: true,
+        }
         : false,
   }),
 );
