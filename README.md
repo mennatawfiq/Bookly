@@ -22,12 +22,12 @@ You need Docker and Docker Compose.
 
 1. Create `.env.docker` in the project root (copy `.env.docker.example`) and fill in the values:
 
-   | Variable | Meaning |
-   |---|---|
+   | Variable                                            | Meaning                                                          |
+   | --------------------------------------------------- | ---------------------------------------------------------------- |
    | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Database credentials. Use a password without special characters. |
-   | `JWT_SECRET` | Long random secret for signing tokens |
-   | `JWT_EXPIRES_IN` | Token lifetime, for example `1h` |
-   | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | The first admin account. Use a strong password. |
+   | `JWT_SECRET`                                        | Long random secret for signing tokens                            |
+   | `JWT_EXPIRES_IN`                                    | Token lifetime, for example `1h`                                 |
+   | `ADMIN_EMAIL`, `ADMIN_PASSWORD`                     | The first admin account. Use a strong password.                  |
 
 2. Start the database:
 
@@ -76,15 +76,15 @@ If you change the code or the Dockerfile, rebuild with `up -d --build api`. Plai
 
 ## Scripts
 
-| Script | What it does |
-|---|---|
-| `npm run dev` | Dev server with auto reload |
-| `npm run build` / `npm start` | Compile and run the compiled app |
-| `npm run typecheck` | Type check without building |
-| `npm run lint` / `lint:fix` | ESLint |
-| `npm run format` / `format:check` | Prettier |
-| `npm test` | Run all tests once |
-| `npm run seed:admin` | Create the first admin |
+| Script                            | What it does                     |
+| --------------------------------- | -------------------------------- |
+| `npm run dev`                     | Dev server with auto reload      |
+| `npm run build` / `npm start`     | Compile and run the compiled app |
+| `npm run typecheck`               | Type check without building      |
+| `npm run lint` / `lint:fix`       | ESLint                           |
+| `npm run format` / `format:check` | Prettier                         |
+| `npm test`                        | Run all tests once               |
+| `npm run seed:admin`              | Create the first admin           |
 
 ## Tests
 
@@ -106,7 +106,7 @@ With the API running:
 
 ## More documentation
 
-- [Business requirements](docs/business-requirements.md): roles, entities, business rules, locking strategy. 
+- [Business requirements](docs/business-requirements.md): roles, entities, business rules, locking strategy.
 
 ## Known limitations and next steps
 
