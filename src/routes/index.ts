@@ -1,4 +1,4 @@
-import Router from 'express';
+import { Router } from 'express';
 
 import authRouter from './auth.routes';
 import eventRouter from './event.routes';

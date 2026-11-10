@@ -1,4 +1,4 @@
-import Router from 'express';
+import { Router } from 'express';
 import { authenticate, authorize, requireOwnership } from '../middlewares/auth';
 import { validate } from '../middlewares/validate';
 import {

@@ -30,18 +30,18 @@ export async function registerUser(name: string, email: string, password: string
   return user;
 }
 
+const DUMMY_PASSWORD_HASH = '$2b$12$IblQX.MFBASVkhD6EJMqLe3gsSSW/FoVC6hSl9F/lhgQQwCxnnvNK';
+
 export async function loginUser(email: string, password: string) {
   const user = await prisma.user.findUnique({
     where: { email, deletedAt: null },
   });
 
-  if (!user) {
-    throw new AppError(401, 'Invalid email or password');
-  }
+  const passwordHash = user?.passwordHash ?? DUMMY_PASSWORD_HASH;
 
-  const passwordMatches = await bcrypt.compare(password, user?.passwordHash);
+  const passwordMatches = await bcrypt.compare(password, passwordHash);
 
-  if (!passwordMatches) {
+  if (!user || !passwordMatches) {
     throw new AppError(401, 'Invalid email or password');
   }
 
