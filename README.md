@@ -92,7 +92,7 @@ Tests are integration tests. They call the real API and a real PostgreSQL databa
 
 1. Create a database named `event_booking_test`.
 2. Create `.env.test` with a `DATABASE_URL` that points to it.
-3. Apply the migrations to that database. TODO: write the exact command you use. Run `npm run test:db:migrate`
+3. Apply the migrations to that database. Run `npm run test:db:migrate`
 4. Run `npm test`.
 
 The test setup refuses to run on any database not named `event_booking_test`, and it deletes all data in it before each test. This protects your real data.
