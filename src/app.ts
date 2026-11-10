@@ -6,6 +6,7 @@ import { jsend } from './middlewares/jsend';
 import swaggerUi from 'swagger-ui-express';
 import morgan from 'morgan';
 import helmet from 'helmet';
+import cors from 'cors';
 
 export const app = express();
 
@@ -20,6 +21,24 @@ app.use(
             includeSubDomains: true,
           }
         : false,
+  }),
+);
+
+const clientOrigin =
+  process.env.NODE_ENV === 'production'
+    ? process.env.CLIENT_ORIGIN_PROD
+    : process.env.CLIENT_ORIGIN_DEV;
+
+// if CLIENT_ORIGIN is undefined, the CORS package can fall back to allowing all origins
+if (!clientOrigin) {
+  throw new Error('CLIENT_ORIGIN environment variable is required');
+}
+
+app.use(
+  cors({
+    origin: clientOrigin,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   }),
 );
 
