@@ -1,5 +1,6 @@
 import rateLimit from 'express-rate-limit';
 import { AppError } from '../errorhandling/appError';
+import { env } from '../config/env';
 
 // Middleware to limit the number of requests from a single IP address within a specified time window.
 export const createRateLimiter = (
@@ -24,12 +25,12 @@ export const createRateLimiter = (
 
 export const loginLimiter = createRateLimiter(
   15,
-  5,
+  env.LOGIN_RATE_LIMIT,
   'Too many login attempts. Please try again later.',
   true,
 );
 export const registerLimiter = createRateLimiter(
   60,
-  5,
+  env.REGISTER_RATE_LIMIT,
   'Too many registration attempts. Please try again later.',
 );
