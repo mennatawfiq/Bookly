@@ -4,7 +4,6 @@ import router from './routes/index';
 import { errorHandler } from './middlewares/errorHandler';
 import { jsend } from './middlewares/jsend';
 import swaggerUi from 'swagger-ui-express';
-import morgan from 'morgan';
 import helmet from 'helmet';
 import cors from 'cors';
 
@@ -16,9 +15,9 @@ app.use(
     strictTransportSecurity:
       process.env.NODE_ENV === 'production'
         ? {
-            maxAge: 31536000,
-            includeSubDomains: true,
-          }
+          maxAge: 31536000,
+          includeSubDomains: true,
+        }
         : false,
   }),
 );
@@ -41,7 +40,6 @@ app.use(
   }),
 );
 
-app.use(morgan('dev'));
 app.use(express.json());
 app.use(jsend);
 
