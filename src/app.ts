@@ -6,8 +6,22 @@ import { jsend } from './middlewares/jsend';
 import swaggerUi from 'swagger-ui-express';
 import helmet from 'helmet';
 import cors from 'cors';
+import { pinoHttp } from 'pino-http';
+import { randomUUID } from 'node:crypto';
+import { logger } from './lib/logger';
 
 export const app = express();
+
+app.use(
+  pinoHttp({
+    logger,
+    genReqId: (_req, res) => {
+      const requestId = randomUUID();
+      res.setHeader('X-Request-Id', requestId);
+      return requestId;
+    },
+  }),
+);
 
 // set HSTS in production
 app.use(
@@ -15,9 +29,9 @@ app.use(
     strictTransportSecurity:
       process.env.NODE_ENV === 'production'
         ? {
-          maxAge: 31536000,
-          includeSubDomains: true,
-        }
+            maxAge: 31536000,
+            includeSubDomains: true,
+          }
         : false,
   }),
 );
@@ -36,7 +50,8 @@ app.use(
   cors({
     origin: clientOrigin,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization'], // Headers the browser can send
+    exposedHeaders: ['X-Request-Id'], // Response headers browser JavaScript can read
   }),
 );
 

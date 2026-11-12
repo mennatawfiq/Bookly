@@ -12,6 +12,8 @@ export const register = async (
 
   const user = await registerUser(name, email, password);
 
+  req.log.info({ userId: user.id, email: user.email }, 'User registered successfully');
+
   res.jsend.success({ user }, 201);
 };
 
@@ -21,6 +23,8 @@ export const login = async (req: Request, res: Response) => {
   const user = await loginUser(email, password);
 
   const token = generateAccessToken(user.id);
+
+  req.log.info({ userId: user.id, email: user.email }, 'User logged-in successfully');
 
   res.jsend.success({ user, token }, 200);
 };

@@ -62,6 +62,8 @@ export const postEvent = async (req: Request, res: Response) => {
 
   const event = await postEventService(eventInfo, organizerId);
 
+  req.log.info({ eventId: event.id }, 'Event created successfully');
+
   res.jsend.success({ event }, 201);
 };
 
@@ -99,6 +101,8 @@ export const cancelEvent = async (req: Request, res: Response) => {
   }
 
   await cancelEventService(eventId);
+
+  req.log.info({ eventId }, 'Event cancelled successfully');
 
   res.status(204).send();
 };
@@ -182,6 +186,8 @@ export const postBooking = async (req: Request, res: Response) => {
 
   const booking = await postBookingService(userId, eventId, bookingInfo);
 
+  req.log.info({ bookingId: booking.id, eventId }, 'Booking created successfully');
+
   res.jsend.success({ booking }, 201);
 };
 
@@ -200,6 +206,8 @@ export const checkIn = async (req: Request, res: Response) => {
   const checkInInfo = req.body;
 
   const type = await checkInService(eventId, checkInInfo, userId);
+
+  req.log.info({ ticketCode: checkInInfo.code, eventId }, 'Ticket checked-in successfully');
 
   res.jsend.success({ type }, 200);
 };
