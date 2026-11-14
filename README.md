@@ -110,7 +110,6 @@ With the API running:
 
 ## Known limitations and next steps
 
-- No `/health` endpoint and no graceful shutdown yet
 - Docker image is large (about 870 MB) because of Prisma tooling
 - Migrations and the admin seed are manual steps
 - No payments, notifications, or background jobs in v1 (see the requirements doc)
