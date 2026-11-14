@@ -20,6 +20,26 @@ app.use(
       res.setHeader('X-Request-Id', requestId);
       return requestId;
     },
+    customLogLevel: (_req, res, err) => {
+      if (err || res.statusCode >= 500) {
+        return 'error';
+      }
+      if (res.statusCode >= 400) {
+        return 'warn';
+      }
+      return 'info';
+    },
+    serializers: {
+      req: (req) => ({
+        id: req.id,
+        method: req.method,
+        url: req.url,
+        remoteAddress: req.remoteAddress,
+      }),
+      res: (res) => ({
+        statusCode: res.statusCode,
+      }),
+    },
   }),
 );
 
@@ -29,9 +49,9 @@ app.use(
     strictTransportSecurity:
       process.env.NODE_ENV === 'production'
         ? {
-            maxAge: 31536000,
-            includeSubDomains: true,
-          }
+          maxAge: 31536000,
+          includeSubDomains: true,
+        }
         : false,
   }),
 );
