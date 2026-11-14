@@ -4,11 +4,44 @@ import router from './routes/index';
 import { errorHandler } from './middlewares/errorHandler';
 import { jsend } from './middlewares/jsend';
 import swaggerUi from 'swagger-ui-express';
-import morgan from 'morgan';
 import helmet from 'helmet';
 import cors from 'cors';
+import { pinoHttp } from 'pino-http';
+import { randomUUID } from 'node:crypto';
+import { logger } from './lib/logger';
 
 export const app = express();
+
+app.use(
+  pinoHttp({
+    logger,
+    genReqId: (_req, res) => {
+      const requestId = randomUUID();
+      res.setHeader('X-Request-Id', requestId);
+      return requestId;
+    },
+    customLogLevel: (_req, res, err) => {
+      if (err || res.statusCode >= 500) {
+        return 'error';
+      }
+      if (res.statusCode >= 400) {
+        return 'warn';
+      }
+      return 'info';
+    },
+    serializers: {
+      req: (req) => ({
+        id: req.id,
+        method: req.method,
+        url: req.url,
+        remoteAddress: req.remoteAddress,
+      }),
+      res: (res) => ({
+        statusCode: res.statusCode,
+      }),
+    },
+  }),
+);
 
 // set HSTS in production
 app.use(
@@ -16,9 +49,9 @@ app.use(
     strictTransportSecurity:
       process.env.NODE_ENV === 'production'
         ? {
-            maxAge: 31536000,
-            includeSubDomains: true,
-          }
+          maxAge: 31536000,
+          includeSubDomains: true,
+        }
         : false,
   }),
 );
@@ -37,11 +70,11 @@ app.use(
   cors({
     origin: clientOrigin,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization'], // Headers the browser can send
+    exposedHeaders: ['X-Request-Id'], // Response headers browser JavaScript can read
   }),
 );
 
-app.use(morgan('dev'));
 app.use(express.json());
 app.use(jsend);
 

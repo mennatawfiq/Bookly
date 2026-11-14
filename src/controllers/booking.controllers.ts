@@ -66,6 +66,8 @@ export const cancelBooking = async (req: Request, res: Response) => {
 
   await cancelBookingService(bookingId);
 
+  req.log.info({ bookingId }, 'Booking cancelled successfully');
+
   res.status(204).send();
 };
 
@@ -82,6 +84,8 @@ export const cancelTicket = async (req: Request, res: Response) => {
 
   await cancelTicketService(bookingId, ticketId);
 
+  req.log.info({ bookingId, ticketId }, 'Ticket cancelled successfully');
+
   res.status(204).send();
 };
 
@@ -95,6 +99,8 @@ export const patchTicketCount = async (req: Request, res: Response) => {
   const ticketCountInfo = req.body;
 
   const booking = await patchTicketCountService(bookingId, ticketCountInfo);
+
+  req.log.info({ bookingId }, 'Ticket-count increased successfully');
 
   res.jsend.success({ booking }, 200);
 };

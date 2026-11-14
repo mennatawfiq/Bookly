@@ -1,10 +1,15 @@
 import 'dotenv/config';
 import type { StringValue } from 'ms';
 
+const NODE_ENV = process.env.NODE_ENV;
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN;
 const LOGIN_RATE_LIMIT = process.env.LOGIN_RATE_LIMIT;
 const REGISTER_RATE_LIMIT = process.env.REGISTER_RATE_LIMIT;
+
+if (!NODE_ENV || !['development', 'test', 'production'].includes(NODE_ENV)) {
+  throw new Error('NODE_ENV is invalid');
+}
 
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET is not defined');
@@ -34,9 +39,17 @@ if (!Number.isInteger(registerVal) || registerVal < 1) {
   throw new Error('REGISTER_RATE_LIMIT is invalid');
 }
 
+const SENTRY_DSN = process.env.SENTRY_DSN;
+
+if (!SENTRY_DSN) {
+  throw new Error('SENTRY_DSN is not defined');
+}
+
 export const env = {
+  NODE_ENV,
   JWT_SECRET,
   JWT_EXPIRES_IN: JWT_EXPIRES_IN as StringValue,
   LOGIN_RATE_LIMIT: Number(LOGIN_RATE_LIMIT),
   REGISTER_RATE_LIMIT: Number(REGISTER_RATE_LIMIT),
+  SENTRY_DSN,
 };

@@ -22,6 +22,8 @@ export const postApplication = async (req: Request, res: Response) => {
 
   const application = await postApplicationService(userId, applicationInfo);
 
+  req.log.info({ applicationId: application.id }, 'Application created successfully');
+
   res.jsend.success({ application }, 201);
 };
 
@@ -76,6 +78,8 @@ export const approveApplication = async (req: Request, res: Response) => {
 
   const application = await approveApplicationService(applicationId, adminId, reviewNote);
 
+  req.log.info({ applicationId: application.id }, 'Application approved successfully');
+
   res.jsend.success({ application }, 200);
 };
 
@@ -95,6 +99,8 @@ export const rejectApplication = async (req: Request, res: Response) => {
   const { reviewNote } = req.body;
 
   const application = await rejectApplicationService(applicationId, adminId, reviewNote);
+
+  req.log.info({ applicationId: application.id }, 'Application rejected successfully');
 
   res.jsend.success({ application }, 200);
 };
