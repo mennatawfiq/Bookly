@@ -8,111 +8,103 @@ A backend API for publishing events and booking spots in them. Organizers create
 - Users apply to become organizers, and admins approve or reject
 - Organizers create, publish, and cancel events, and define ticket types
 - Users book tickets, add tickets, cancel single tickets, or cancel a booking
-- Capacity is enforced per ticket type, even with many users booking at the same time
+- Capacity is enforced per ticket type, even when many users book at the same time
 - Check-in at the door by scanning the ticket code
 - Users can delete (anonymize) their own account
 
 ## Tech stack
 
-Node.js, TypeScript, Express 5, PostgreSQL, Prisma 7, Zod, JWT, Vitest + Supertest, Docker.
+Node.js, TypeScript, Express 5, PostgreSQL, Prisma 7, Zod, JWT, Vitest, Supertest, Docker, GitHub Actions.
 
-## Run with Docker
+## Engineering
 
-You need Docker and Docker Compose.
+- **Security:** Helmet headers, CORS limited to one origin, rate limiting on login and register, env variables checked at startup
+- **Observability:** structured logs (pino) with a request ID and response time on every request, errors sent to Sentry
+- **Health checks:** `/health/live` (is the process up) and `/health/ready` (can it reach the database)
+- **CI:** GitHub Actions runs migrations, type check, lint, and tests on a real PostgreSQL for every push and PR to `main`
+- **Docker:** multi-stage build, Docker Compose for the API and PostgreSQL
 
-1. Create `.env.docker` in the project root (copy `.env.docker.example`) and fill in the values:
+## Quick start (Docker)
 
-   | Variable                                            | Meaning                                                          |
-   | --------------------------------------------------- | ---------------------------------------------------------------- |
-   | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Database credentials. Use a password without special characters. |
-   | `JWT_SECRET`                                        | Long random secret for signing tokens                            |
-   | `JWT_EXPIRES_IN`                                    | Token lifetime, for example `1h`                                 |
-   | `ADMIN_EMAIL`, `ADMIN_PASSWORD`                     | The first admin account. Use a strong password.                  |
-
-2. Start the database:
-
-   ```bash
-   docker compose --env-file .env.docker up -d db
-   ```
-
-3. Run the migrations (one-off container):
-
-   ```bash
-   docker compose --env-file .env.docker run --rm migrate
-   ```
-
-4. Start the API:
-
-   ```bash
-   docker compose --env-file .env.docker up -d --build api
-   ```
-
-5. Create the first admin (run once on a new database):
-
-   ```bash
-   docker compose --env-file .env.docker run --rm api node dist/src/scripts/run-seed-admin.js
-   ```
-
-The API is at http://localhost:3000. The database is exposed on host port 5433.
-
-Useful commands:
+1. Copy `.env.docker.example` to `.env.docker` and fill it in (see [Environment variables](#environment-variables)).
+2. Run these commands in order:
 
 ```bash
-docker compose --env-file .env.docker logs api    # see API logs
-docker compose --env-file .env.docker down        # stop (data is kept)
+docker compose --env-file .env.docker up -d db
+docker compose --env-file .env.docker run --rm migrate
+docker compose --env-file .env.docker up -d --build api
+docker compose --env-file .env.docker run --rm api node dist/src/scripts/run-seed-admin.js   # once, creates the first admin
 ```
 
-> Do not use `down -v`. It deletes the database volume and all your data.
+The API runs at http://localhost:3000.
 
-If you change the code or the Dockerfile, rebuild with `up -d --build api`. Plain `up` and `run` reuse the old image.
+> Never run `docker compose down -v`. It deletes the database volume.
+> After code changes, rebuild with `up -d --build api`.
 
 ## Run locally (without Docker for the API)
 
-1. Install dependencies: `npm ci`
-2. Create `.env` with `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`.
-3. Generate the Prisma client and apply migrations: `npx prisma generate` then `npx prisma migrate dev`
-4. Create the admin: `npm run seed:admin`
-5. Start the dev server: `npm run dev`
+```bash
+npm ci
+npx prisma generate
+npx prisma migrate dev
+npm run seed:admin
+npm run dev
+```
 
-## Scripts
+You need a `.env` file first (see below).
 
-| Script                            | What it does                     |
-| --------------------------------- | -------------------------------- |
-| `npm run dev`                     | Dev server with auto reload      |
-| `npm run build` / `npm start`     | Compile and run the compiled app |
-| `npm run typecheck`               | Type check without building      |
-| `npm run lint` / `lint:fix`       | ESLint                           |
-| `npm run format` / `format:check` | Prettier                         |
-| `npm test`                        | Run all tests once               |
-| `npm run seed:admin`              | Create the first admin           |
+## Environment variables
+
+| Variable | Meaning |
+| --- | --- |
+| `NODE_ENV` | `development`, `test`, or `production` |
+| `PORT` | Port the API listens on |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `JWT_SECRET` | Long random secret for signing tokens |
+| `JWT_EXPIRES_IN` | Token lifetime, for example `1h` |
+| `CLIENT_ORIGIN_DEV`, `CLIENT_ORIGIN_PROD` | The one frontend origin allowed by CORS |
+| `LOGIN_RATE_LIMIT`, `REGISTER_RATE_LIMIT` | Max failed logins per 15 min, and max registrations per hour, per IP |
+| `SENTRY_DSN` | Where errors are sent |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | The first admin (password must be strong) |
+
+The app refuses to start if one of the required variables is missing.
 
 ## Tests
 
-Tests are integration tests. They call the real API and a real PostgreSQL database, including concurrency tests (many users booking the last spots, double cancel, two scanners on one ticket).
+Tests are integration tests: real API, real PostgreSQL, including concurrency cases (many users booking the last spots, double cancel, two scanners on one ticket).
 
 1. Create a database named `event_booking_test`.
 2. Create `.env.test` with a `DATABASE_URL` that points to it.
-3. Apply the migrations to that database. Run `npm run test:db:migrate`
-4. Run `npm test`.
+3. `npm run test:db:migrate`
+4. `npm test`
 
-The test setup refuses to run on any database not named `event_booking_test`, and it deletes all data in it before each test. This protects your real data.
+The tests refuse to run on any database not named `event_booking_test`, because they delete all data before each test.
+
+## Scripts
+
+| Script | What it does |
+| --- | --- |
+| `npm run dev` | Dev server with auto reload |
+| `npm run build` / `npm start` | Compile and run |
+| `npm run typecheck` | Type check |
+| `npm run lint` / `npm run format` | ESLint / Prettier |
+| `npm test` | Run all tests once |
+| `npm run seed:admin` | Create the first admin |
 
 ## API documentation
 
-With the API running:
+Available only when `NODE_ENV` is not `production`:
 
 - Swagger UI: http://localhost:3000/api-docs
 - OpenAPI JSON (for Postman): http://localhost:3000/openapi.json
 
-## More documentation
+More: [Business requirements](docs/business-requirements.md) (roles, entities, rules, locking).
 
-- [Business requirements](docs/business-requirements.md): roles, entities, business rules, locking strategy.
+## Known limitations
 
-## Known limitations and next steps
-
-- Docker image is large (about 870 MB) because of Prisma tooling
-- Migrations and the admin seed are manual steps
-- No payments, notifications, or background jobs in v1 (see the requirements doc)
+- Docker image is large (~870 MB) because of Prisma tooling.
+- Migrations and the admin seed are manual steps.
+- No payments, notifications, or background jobs yet.
 
 ## License
 
